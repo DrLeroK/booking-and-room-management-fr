@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { bookingAPI, roomAPI, guestAPI } from "@/lib/api/endpoints";
+import { OfflineSyncManager } from "@/lib/offline-sync";
 import {
   UserPlusIcon,
   MagnifyingGlassIcon,
@@ -120,7 +121,7 @@ export default function CheckInPage() {
       const response = await guestAPI.getGuests({ search: searchTerm });
       setSearchResults(response.data.results || []);
       if (response.data.results?.length === 0) {
-        toast.info("No guests found. You can create a new one.");
+        toast("No guests found. You can create a new one.", { icon: "ℹ️" });
       }
     } catch (error) {
       toast.error("Failed to search guests");
@@ -204,11 +205,34 @@ export default function CheckInPage() {
         notes: checkInData.notes,
       };
 
+      if (typeof window !== "undefined" && !navigator.onLine) {
+        OfflineSyncManager.enqueueMutation(
+          "/bookings/reception/walk-in-checkin/",
+          "POST",
+          payload,
+          `Walk-in Check-in for Room ${selectedRoom.room_number}`
+        );
+        toast.success(
+          "OFFLINE: Saved locally to Outbox. Will sync automatically once internet reconnects.",
+          { duration: 6000 }
+        );
+        router.push("/reception");
+        return;
+      }
+
       await bookingAPI.walkInCheckin(payload);
       toast.success("Check-in successful!");
       router.push("/reception");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Check-in failed");
+      if (error.response?.status === 409) {
+        toast.error(
+          error.response?.data?.error ||
+            "Conflict: Room is no longer available or was booked online. Please select another room.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(error.response?.data?.message || "Check-in failed");
+      }
     } finally {
       setIsLoading(false);
     }

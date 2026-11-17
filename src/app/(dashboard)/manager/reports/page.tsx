@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { analyticsAPI } from "@/lib/api/endpoints";
+import { ApiClient } from "@/lib/api";
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -141,10 +142,11 @@ export default function ReportsPage() {
       if (startDate) params.append('start_date', startDate);
       if (endDate) params.append('end_date', endDate);
       
-      const fullUrl = `${process.env.NEXT_PUBLIC_API_URL}${url}?${params.toString()}`;
+      const apiBase = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const fullUrl = `${apiBase}${url}?${params.toString()}`;
       
       // Fetch the CSV
-      const token = document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+      const token = ApiClient.getAccessToken();
       
       const response = await fetch(fullUrl, {
         headers: {

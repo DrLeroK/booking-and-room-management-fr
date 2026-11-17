@@ -50,10 +50,15 @@
 
 ### 🛎️ 2. Receptionist Portal (`/reception`)
 - **Live Operations Board**: Real-time breakdown of occupied rooms, expected arrivals/departures today, and pending payment proof verification queue.
+- **Offline Mode & Outbox Sync (`OfflineNoticeBanner.tsx`)**:
+  - High-visibility banner when internet disconnects:
+    > *"OFFLINE MODE: Room inventory is unconfirmed. Only assign rooms from the Emergency Offline Pool. ⚠️ Warning: Do not sell the last remaining room without manager verification."*
+  - Automatically stores check-ins to local outbox (`localStorage`) with unique idempotency keys (`X-Idempotency-Key`).
+  - Auto-synchronizes with backend on reconnection and displays conflict warnings (`409 Conflict`) if an offline room was claimed.
 - **Walk-In Check-In**: Instant registration of walk-in guests, room allocation, security deposit recording, and key card assignment.
 - **Reservation Check-In**: Process confirmed online bookings upon guest arrival.
 - **Check-Out Processing**: Departure logging, extra charge calculation (mini-bar, damage fees), room cleaning status updates (`DIRTY_CLEANING`).
-- **Payment Verification Workflow**: Staff inspect uploaded bank transfer screenshots, approve (dispatched guest SMS confirmation) or reject payment.
+- **Payment Verification & Rejection Modal**: Staff inspect uploaded bank transfer screenshots. Approving confirms booking; rejecting instantly marks payment as failed, cancels booking, and **releases the room immediately back to available inventory**.
 - **Stay Extensions (`ExtendStayModal`)**: Dynamically extend active stays with real-time room availability conflict checks and price recalculations.
 
 ### 📊 3. Manager Dashboard (`/manager`)
@@ -66,14 +71,18 @@
 - **Staff Management**: Create staff accounts, filter by role (`RECEPTIONIST`, `MANAGER`, `OWNER`, `ADMIN`), and toggle account active status.
 - **Financial Reports & Exports**: Export CSV reports for bookings, payments, and guest registers.
 
-### 🔐 5. Authentication, Security & Middleware
+### 📱 5. Progressive Web App (PWA) & SEO/AEO/GEO
+- **PWA Installation**: Installable as a native desktop or mobile app via `manifest.ts` / `manifest.json` and `sw.js` service worker.
+- **Search & AI Optimization**: Dynamic `robots.ts` and `sitemap.ts` configured for Google SEO, Answer Engine Optimization (AEO), and Generative Engine Optimization (GEO).
+
+### 🔐 6. Authentication, Security & Next.js Proxy
 - **JWT Authentication**: SimpleJWT integration with automatic token refreshing via Axios interceptors.
-- **Next.js Server-Side Middleware Guard (`src/middleware.ts`)**: Automatic route protection enforcing role permissions:
+- **Next.js Server-Side Route Guard (`src/proxy.ts`)**: Migrated to Next.js 16 `proxy.ts` convention:
   - `/owner/*` → Restricted to `OWNER` & `ADMIN`.
   - `/manager/*` → Restricted to `MANAGER`, `OWNER` & `ADMIN`.
   - `/reception/*` → Restricted to `RECEPTIONIST`, `MANAGER`, `OWNER` & `ADMIN`.
 - **API Rewrites Proxy (`next.config.ts`)**: Bypasses CORS issues by proxying `/api/v1/*` requests to the Django REST backend.
-- **1-Click Demo Login Credentials**: Quick auto-fill buttons on the login page for rapid multi-role testing.
+- **1-Click Demo Login Credentials**: Quick auto-fill buttons on the login page matching database seed accounts.
 - **Rate Limit & Brute-Force Alerting**: Graceful parsing of backend `429 Too Many Requests` status and 15-minute account lockout notices.
 
 ---
@@ -82,19 +91,20 @@
 
 | Role | Username | Password | Dashboard Access |
 | :--- | :--- | :--- | :--- |
-| **Manager** | `manager` | `manager12345` | `/manager` |
-| **Receptionist** | `receptionist1` | `receptionist12345` | `/reception` |
-| **Owner** | `owner` | `owner12345` | `/owner` |
-| **Admin** | `admin` | `admin12345` | `/owner` |
+| **Manager** | `manager` | `Manager@StayCraft2026!` | `/manager` |
+| **Receptionist** | `receptionist1` | `Reception@StayCraft2026!` | `/reception` |
+| **Owner** | `owner` | `Owner@StayCraft2026!` | `/owner` |
+| **Admin** | `admin` | `Admin@StayCraft2026!` | `/owner` |
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 15/16 (App Router, Turbopack)
+- **Framework**: Next.js 16 (App Router, Turbopack)
 - **Language**: TypeScript 5.9
 - **Styling**: Tailwind CSS 4.0, Framer Motion Animations
 - **State Management**: Zustand (`authStore.ts`, `uiStore.ts`)
+- **Offline Engine**: Custom Outbox Queue with Idempotency Key Replay
 - **Form Handling**: React Hook Form, Zod Validation
 - **HTTP Client**: Axios with Request/Response Interceptors
 - **Notifications**: React Hot Toast
@@ -107,34 +117,47 @@
 ```
 booking-and-room-management-fr/
 ├── public/
+│   ├── sw.js                     # Service Worker for PWA caching & offline support
+│   ├── manifest.json             # Web App Manifest specification
+│   ├── icon-192.png              # PWA App Icon (192x192)
+│   ├── icon-512.png              # PWA App Icon (512x512)
 │   └── images/                   # Static images (hero background, room previews)
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/
-│   │   │   └── login/            # Role login page with 1-click demo buttons
+│   │   │   ├── login/            # Role login page with 1-click demo buttons
+│   │   │   ├── forgot-password/  # Password recovery request page
+│   │   │   └── reset-password/   # Token-based password reset page
 │   │   ├── (dashboard)/
 │   │   │   ├── manager/          # Room inventory, amenities & staff management
 │   │   │   ├── owner/            # Executive revenue analytics & staff creation
-│   │   │   └── reception/        # Live board, check-in, check-out, bookings
+│   │   │   └── reception/        # Live board, check-in, check-out, bookings, payments
 │   │   ├── (public)/
 │   │   │   ├── about/            # About hotel page
-│   │   │   ├── booking/          # Room availability search & payment proof upload
+│   │   │   ├── booking/          # Room availability search & Last-Room Rule notice
 │   │   │   ├── contact/          # Inquiry form page
 │   │   │   ├── gallery/          # Full photo gallery showcase
 │   │   │   ├── lookup/           # Stay status lookup by phone number
 │   │   │   └── services/         # Amenities & services list
+│   │   ├── manifest.ts           # Dynamic Next.js Web App Manifest
+│   │   ├── robots.ts             # Dynamic robots.txt for search engines
+│   │   ├── sitemap.ts            # Dynamic sitemap.xml for SEO/AEO/GEO
 │   │   ├── globals.css           # Global Tailwind CSS styles
-│   │   ├── layout.tsx            # Root HTML layout & Zustand providers
+│   │   ├── layout.tsx            # Root HTML layout, Zustand providers & PWA register
 │   │   └── page.tsx              # Public landing homepage
 │   ├── components/
-│   │   ├── common/               # Header, Footer, Navbars
-│   │   ├── modals/               # ExtendStayModal, PaymentProofModal
+│   │   ├── common/               # Header, Footer, OfflineNoticeBanner, PWARegister
+│   │   ├── layout/               # DashboardShell, Sidebar, Topbar
+│   │   ├── modals/               # ExtendStayModal, PaymentProofModal, RejectionWarningModal
 │   │   └── public/               # HeroSection, Amenities, Testimonials, Gallery, FAQ
 │   ├── lib/
 │   │   ├── api/                  # Axios HTTP client, endpoints & JWT interceptors
+│   │   ├── offline-sync.ts       # Outbox queue manager & automatic online synchronization
+│   │   ├── security.ts           # Storage encryption helpers & token validation
 │   │   ├── providers.tsx         # Client context providers
 │   │   └── store/                # Zustand stores (authStore & uiStore)
-│   └── middleware.ts             # Next.js Server-Side Route Protection Guard
+│   └── proxy.ts                  # Next.js 16 Server-Side Route Guard & Role Redirector
+├── .env.example                  # Environment variables template (no public prefixes)
 ├── next.config.ts                # Next.js configuration & API proxy rewrites
 ├── package.json                  # Dependencies & npm scripts
 ├── tsconfig.json                 # TypeScript configuration

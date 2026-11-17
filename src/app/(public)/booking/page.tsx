@@ -23,6 +23,8 @@ import {
   DocumentArrowUpIcon,
   MagnifyingGlassIcon,
   BanknotesIcon,
+  ExclamationTriangleIcon,
+  PhoneIcon,
 } from "@heroicons/react/24/outline";
 
 // Validation schemas
@@ -37,8 +39,8 @@ const guestSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().optional(),
   phone_number: z.string().min(1, "Phone number is required"),
-  email: z.string().email("Invalid email").optional(),
-  identification_type: z.string().default("NATIONAL_ID"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  identification_type: z.string(),
   identification_number: z.string().optional(),
   address: z.string().optional(),
 });
@@ -89,6 +91,8 @@ export default function PublicBookingPage() {
   const [nights, setNights] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [onlineSalesClosed, setOnlineSalesClosed] = useState(false);
+  const [onlineNotice, setOnlineNotice] = useState<string | null>(null);
 
   const {
     register: registerBooking,
@@ -160,6 +164,20 @@ export default function PublicBookingPage() {
         guests_count: data.guests_count,
         room_type_id: data.room_type_id,
       });
+
+      if (response.data.online_sales_closed) {
+        setOnlineSalesClosed(true);
+        setOnlineNotice(
+          response.data.notice ||
+            "Online bookings are closed for remaining inventory. Please call our front desk directly to check last-room availability."
+        );
+        setAvailableRooms([]);
+        toast.error("Online booking closed for remaining rooms. Please call our front desk directly.");
+        return;
+      }
+
+      setOnlineSalesClosed(false);
+      setOnlineNotice(null);
 
       const availableOnly = (response.data.rooms || []).filter(
         (room: Room) => room.status === "AVAILABLE"
@@ -258,7 +276,13 @@ export default function PublicBookingPage() {
       setStep(4);
     } catch (error: any) {
       console.error("Booking error:", error);
-      toast.error(error.response?.data?.message || "Failed to create booking");
+      const serverMsg =
+        error.response?.data?.message ||
+        (Array.isArray(error.response?.data) ? error.response?.data[0] : null) ||
+        error.response?.data?.detail ||
+        (typeof error.response?.data === "string" ? error.response?.data : null) ||
+        "Failed to create booking";
+      toast.error(serverMsg, { duration: 6000 });
     } finally {
       setIsLoading(false);
     }
@@ -389,6 +413,30 @@ export default function PublicBookingPage() {
                 )}
               </button>
             </form>
+
+            {onlineSalesClosed && (
+              <div className="mt-5 bg-amber-50 border-2 border-amber-500 rounded-xl p-4 text-amber-900 shadow-sm animate-pulse-subtle">
+                <div className="flex items-start gap-3">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-bold text-sm text-amber-950 uppercase tracking-wide">
+                      Notice: Online Booking Closed for Remaining Rooms
+                    </h3>
+                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                      {onlineNotice ||
+                        "Our hotel is currently at near full occupancy. In accordance with front desk policy, the final remaining rooms can only be booked directly through our front desk."}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-950 bg-amber-100/70 py-1.5 px-3 rounded-lg border border-amber-300 w-fit">
+                      <PhoneIcon className="h-4 w-4 text-amber-700" />
+                      <span>Call Front Desk Directly:</span>
+                      <a href="tel:+251911000000" className="underline hover:text-amber-800">
+                        +251 911 000 000
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -833,20 +881,23 @@ export default function PublicBookingPage() {
             <p className="text-gray-600 mb-4">
               Thank you for choosing StayCraft Hotel. Your booking request has been received.
             </p>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-green-800">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left space-y-2">
+              <p className="text-sm text-green-800 font-medium">
                 {uploadedFile ? (
-                  "✅ Your payment proof has been uploaded. Our team will verify it shortly."
+                  "✅ Your payment proof has been uploaded. An automated email receipt with your booking details has been sent to your email address."
                 ) : (
                   "ℹ️ Please complete your payment by transferring the total amount to the bank details below."
                 )}
               </p>
+              <p className="text-xs text-green-700">
+                📩 Once our staff reviews and confirms your payment, you will receive an instant email confirmation update. You can also track your booking status anytime using your phone number or booking reference.
+              </p>
               {!uploadedFile && bankDetails && (
-                <div className="mt-3 text-sm">
-                  <p className="font-medium">Bank Details:</p>
-                  <p>Bank: {bankDetails.bank_name}</p>
-                  <p>Account: {bankDetails.account_name}</p>
-                  <p>Number: {bankDetails.account_number}</p>
+                <div className="mt-3 text-sm pt-2 border-t border-green-200">
+                  <p className="font-medium text-gray-900">Bank Details:</p>
+                  <p className="text-gray-700">Bank: {bankDetails.bank_name}</p>
+                  <p className="text-gray-700">Account: {bankDetails.account_name}</p>
+                  <p className="text-gray-700">Number: {bankDetails.account_number}</p>
                   <p className="text-xs text-gray-600 mt-1">{bankDetails.instructions}</p>
                 </div>
               )}

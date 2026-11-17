@@ -8,7 +8,7 @@ const roleDashboards: Record<string, string> = {
   RECEPTIONIST: "/reception",
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const accessToken = request.cookies.get("access_token")?.value;
   const userRole = request.cookies.get("user_role")?.value?.toUpperCase();

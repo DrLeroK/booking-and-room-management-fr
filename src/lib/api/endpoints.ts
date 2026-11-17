@@ -57,7 +57,13 @@ export const roomAPI = {
     api.post<any>(`/rooms/${id}/update-status/`, data),
 
   getAvailableRooms: (params: { check_in_date: string; check_out_date: string; guests_count?: number; room_type_id?: number }) =>
-    api.get<{ available_count: number; rooms: any[]; search_criteria: any }>('/rooms/public-availability/', { params }),
+    api.get<{
+      available_count: number;
+      rooms: any[];
+      search_criteria: any;
+      online_sales_closed?: boolean;
+      notice?: string;
+    }>('/rooms/public-availability/', { params }),
 
   getRoomTypes: () =>
     api.get<{ results: any[] }>('/rooms/types/'),

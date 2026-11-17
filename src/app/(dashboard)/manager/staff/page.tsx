@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { userAPI } from "@/lib/api/endpoints";
+import { useAuthStore } from "@/lib/store/authStore";
+import { strongPasswordRegex } from "@/features/auth/schemas";
 import {
   UsersIcon,
   PlusIcon,
@@ -34,6 +36,9 @@ interface Staff {
 }
 
 export default function StaffManagementPage() {
+  const { user: currentUser } = useAuthStore();
+  const isManagerOnly = currentUser?.role === "MANAGER";
+
   const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,12 +58,17 @@ export default function StaffManagementPage() {
     password_confirm: "",
   });
 
-  const roleOptions = [
-    { value: "ADMIN", label: "System Admin" },
-    { value: "OWNER", label: "Hotel Owner" },
-    { value: "MANAGER", label: "Hotel Manager" },
-    { value: "RECEPTIONIST", label: "Receptionist" },
-  ];
+  const roleOptions = isManagerOnly
+    ? [
+        { value: "RECEPTIONIST", label: "Receptionist" },
+        { value: "MANAGER", label: "Hotel Manager" },
+      ]
+    : [
+        { value: "ADMIN", label: "System Admin" },
+        { value: "OWNER", label: "Hotel Owner" },
+        { value: "MANAGER", label: "Hotel Manager" },
+        { value: "RECEPTIONIST", label: "Receptionist" },
+      ];
 
   useEffect(() => {
     fetchStaff();
@@ -145,8 +155,8 @@ export default function StaffManagementPage() {
         return;
       }
 
-      if (!editingUser && formData.password.length < 6) {
-        toast.error("Password must be at least 6 characters");
+      if (!editingUser && !strongPasswordRegex.test(formData.password)) {
+        toast.error("Password must be at least 8 characters and contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.");
         setIsSubmitting(false);
         return;
       }
@@ -350,31 +360,48 @@ export default function StaffManagementPage() {
                     </td>
                     <td className="py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Toggle active: disabled for Manager if target is Owner or Admin */}
                         <button
                           onClick={() => handleToggleActive(member.id, member.is_active)}
-                          className={`p-1 rounded transition-colors ${
+                          disabled={isManagerOnly && (member.role === 'OWNER' || member.role === 'ADMIN')}
+                          className={`p-1 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                             member.is_active 
                               ? 'text-yellow-600 hover:bg-yellow-50' 
                               : 'text-green-600 hover:bg-green-50'
                           }`}
-                          title={member.is_active ? 'Deactivate' : 'Activate'}
+                          title={
+                            isManagerOnly && (member.role === 'OWNER' || member.role === 'ADMIN')
+                              ? "Managers cannot modify Owner or Admin status"
+                              : member.is_active ? 'Deactivate' : 'Activate'
+                          }
                         >
                           {member.is_active ? <XCircleIcon className="h-5 w-5" /> : <CheckCircleIcon className="h-5 w-5" />}
                         </button>
+
+                        {/* Edit: disabled for Manager if target is Owner or Admin */}
                         <button
                           onClick={() => openEditModal(member)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit"
+                          disabled={isManagerOnly && (member.role === 'OWNER' || member.role === 'ADMIN')}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          title={
+                            isManagerOnly && (member.role === 'OWNER' || member.role === 'ADMIN')
+                              ? "Managers cannot edit Owner or Admin accounts"
+                              : "Edit"
+                          }
                         >
                           <PencilIcon className="h-5 w-5" />
                         </button>
-                        <button
-                          onClick={() => handleDeleteUser(member.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
+
+                        {/* Delete: only Owner and Admin can delete users */}
+                        {!isManagerOnly && (
+                          <button
+                            onClick={() => handleDeleteUser(member.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Delete"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

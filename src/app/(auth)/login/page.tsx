@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -140,6 +141,15 @@ function LoginPage() {
               </div>
             </div>
 
+            <div className="flex items-center justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-blue-600 hover:text-blue-500 hover:underline"
+              >
+                Forgot your password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading || isSubmitting}
@@ -165,63 +175,62 @@ function LoginPage() {
             )}
           </form>
 
-
-          {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <p className="text-xs font-medium text-gray-500 text-center mb-2">🎯 Demo Credentials (Click to auto-fill)</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => reset({ username: "manager", password: "manager12345" })}
+                onClick={() => reset({ username: "manager", password: "Manager@StayCraft2026!" })}
                 className="bg-white p-2 rounded border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-colors"
               >
                 <span className="text-blue-600 font-semibold block">Manager</span>
-                <div>
+                <div className="truncate">
                   <span className="font-mono text-gray-700">manager</span>
                   <span className="text-gray-400 mx-1">/</span>
-                  <span className="font-mono text-gray-700">manager12345</span>
+                  <span className="font-mono text-gray-500 text-[10px]">Manager@...</span>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => reset({ username: "receptionist1", password: "receptionist12345" })}
+                onClick={() => reset({ username: "receptionist1", password: "Reception@StayCraft2026!" })}
                 className="bg-white p-2 rounded border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-colors"
               >
                 <span className="text-emerald-600 font-semibold block">Receptionist</span>
-                <div>
+                <div className="truncate">
                   <span className="font-mono text-gray-700">receptionist1</span>
                   <span className="text-gray-400 mx-1">/</span>
-                  <span className="font-mono text-gray-700">receptionist12345</span>
+                  <span className="font-mono text-gray-500 text-[10px]">Reception@...</span>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => reset({ username: "owner", password: "owner12345" })}
+                onClick={() => reset({ username: "owner", password: "Owner@StayCraft2026!" })}
                 className="bg-white p-2 rounded border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-colors"
               >
                 <span className="text-purple-600 font-semibold block">Owner</span>
-                <div>
+                <div className="truncate">
                   <span className="font-mono text-gray-700">owner</span>
                   <span className="text-gray-400 mx-1">/</span>
-                  <span className="font-mono text-gray-700">owner12345</span>
+                  <span className="font-mono text-gray-500 text-[10px]">Owner@...</span>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => reset({ username: "admin", password: "admin12345" })}
+                onClick={() => reset({ username: "admin", password: "Admin@StayCraft2026!" })}
                 className="bg-white p-2 rounded border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 text-left transition-colors"
               >
                 <span className="text-rose-600 font-semibold block">Admin</span>
-                <div>
+                <div className="truncate">
                   <span className="font-mono text-gray-700">admin</span>
                   <span className="text-gray-400 mx-1">/</span>
-                  <span className="font-mono text-gray-700">admin12345</span>
+                  <span className="font-mono text-gray-500 text-[10px]">Admin@...</span>
                 </div>
               </button>
             </div>
-          </div> */}
+          </div>
 
 
 

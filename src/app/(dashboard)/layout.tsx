@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/lib/store/authStore";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { ownerNavItems, managerNavItems, receptionNavItems } from "@/config/navigation";
 import { PageLoader } from "@/components/common/LoadingSpinner";
 
 export default function DashboardLayout({
@@ -66,13 +66,68 @@ export default function DashboardLayout({
     return null;
   }
 
+  const getNavItems = () => {
+    const path = pathname || "";
+
+    // Receptionist is strictly locked to reception tools
+    if (user.role === "RECEPTIONIST") {
+      return receptionNavItems;
+    }
+
+    // Manager can access manager tools and reception tools
+    if (user.role === "MANAGER") {
+      if (path.startsWith("/reception")) {
+        return [
+          ...receptionNavItems,
+          { title: "Operations", href: "/manager", iconName: "BarChart" },
+        ];
+      }
+      return [
+        ...managerNavItems,
+        { title: "Front Desk", href: "/reception", iconName: "Home" },
+      ];
+    }
+
+    // Owner and Admin have executive access across all modules
+    if (path.startsWith("/reception")) {
+      return [
+        ...receptionNavItems,
+        { title: "Operations", href: "/manager", iconName: "BarChart" },
+        { title: "Executive", href: "/owner", iconName: "LineChart" },
+      ];
+    }
+    if (path.startsWith("/manager")) {
+      return [
+        ...managerNavItems,
+        { title: "Executive", href: "/owner", iconName: "LineChart" },
+        { title: "Front Desk", href: "/reception", iconName: "Home" },
+      ];
+    }
+    return [
+      ...ownerNavItems,
+      { title: "Operations", href: "/manager", iconName: "BarChart" },
+      { title: "Front Desk", href: "/reception", iconName: "Home" },
+    ];
+  };
+
+  const getDashboardTitle = () => {
+    const path = pathname || "";
+    if (path.startsWith("/owner")) {
+      return "Executive Command";
+    }
+    if (path.startsWith("/manager")) {
+      return "Operations Center";
+    }
+    return "Front Desk Reception";
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <DashboardSidebar user={user} />
-      <div className="flex-1 flex flex-col lg:ml-64 min-h-screen">
-        <DashboardHeader user={user} />
-        <main className="flex-1 p-4 md:p-6">{children}</main>
-      </div>
-    </div>
+    <DashboardShell
+      items={getNavItems()}
+      title={getDashboardTitle()}
+      badge={user.role}
+    >
+      {children}
+    </DashboardShell>
   );
 }

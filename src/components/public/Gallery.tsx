@@ -16,8 +16,8 @@ interface GalleryItem {
 
 const getImageUrl = (path?: string) => {
   if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:8000";
+  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const baseUrl = apiUrl.replace("/api/v1", "");
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 

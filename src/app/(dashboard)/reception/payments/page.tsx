@@ -19,6 +19,7 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   IdentificationIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { format, differenceInDays } from "date-fns";
@@ -171,6 +172,10 @@ export default function PaymentsPage() {
 
   const handleVerify = async () => {
     if (!selectedPayment) return;
+    if (verifyAction === "REJECT" && !verifyNotes.trim()) {
+      toast.error("Please provide a reason/notes for rejecting this payment proof.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       await paymentAPI.verifyPayment({
@@ -179,7 +184,11 @@ export default function PaymentsPage() {
         receptionist_name: "Receptionist",
         notes: verifyNotes,
       });
-      toast.success(`Payment ${verifyAction === "APPROVE" ? "approved" : "rejected"} successfully!`);
+      toast.success(
+        verifyAction === "APPROVE"
+          ? "Payment approved successfully!"
+          : "Payment rejected and room released back to available inventory!"
+      );
       setShowVerifyModal(false);
       setSelectedPayment(null);
       fetchPayments();
@@ -604,25 +613,57 @@ export default function PaymentsPage() {
                   }`}
                 >
                   <CheckIcon className="h-4 w-4 inline mr-1" />
-                  Approve
+                  Approve Payment
                 </button>
                 <button
                   onClick={() => setVerifyAction("REJECT")}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                     verifyAction === "REJECT"
-                      ? "bg-red-600 text-white"
+                      ? "bg-red-600 text-white font-bold"
                       : "bg-gray-200 hover:bg-gray-300"
                   }`}
                 >
                   <XMarkIcon className="h-4 w-4 inline mr-1" />
-                  Reject
+                  Reject & Release Room
                 </button>
               </div>
             </div>
 
+            {verifyAction === "REJECT" && (
+              <div className="mb-4 bg-red-50 border-2 border-red-500 rounded-xl p-4 text-red-900 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-black text-sm text-red-800 uppercase tracking-wide">
+                      CRITICAL ACTION: Releasing Room to Available Inventory
+                    </h4>
+                    <p className="text-xs text-red-700 mt-1 leading-relaxed">
+                      You are about to un-verify / reject this online booking (<strong>{selectedPayment.booking_details?.booking_reference || "N/A"}</strong>).
+                    </p>
+                    <div className="mt-2 text-xs bg-white/90 p-2.5 rounded-lg border border-red-200 space-y-1">
+                      <p className="font-bold text-red-900">What happens immediately upon rejection:</p>
+                      <ul className="list-disc pl-4 space-y-0.5 text-red-800">
+                        <li>Payment status is updated to <strong>FAILED</strong>.</li>
+                        <li>Reservation status is updated to <strong>CANCELLED</strong>.</li>
+                        <li>
+                          <strong>Room {selectedPayment.booking_details?.room_details?.room_number || "assigned"} is immediately released back to AVAILABLE status</strong> and can now be booked by walk-ins or other online guests.
+                        </li>
+                      </ul>
+                    </div>
+                    {selectedPayment.booking_details?.guest_details?.phone_number && (
+                      <p className="text-xs font-semibold text-red-900 mt-2 flex items-center gap-1.5">
+                        <PhoneIcon className="h-4 w-4 text-red-600 shrink-0" />
+                        <span>Front Desk Protocol: Make sure you have attempted to call the guest at <strong>{selectedPayment.booking_details?.guest_details?.phone_number}</strong> before confirming rejection.</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {verifyAction === "APPROVE" ? "Approval" : "Rejection"} Notes
+                {verifyAction === "APPROVE" ? "Approval Notes" : "Rejection Reason (Required) *"}
               </label>
               <textarea
                 value={verifyNotes}
@@ -631,7 +672,7 @@ export default function PaymentsPage() {
                 rows={3}
                 placeholder={verifyAction === "APPROVE" 
                   ? "Add verification notes (e.g., amount matches, proof valid)..." 
-                  : "Provide reason for rejection (e.g., amount mismatch, invalid proof)..."}
+                  : "State reason for rejection & guest contact attempt (e.g., Fake transaction ID, called guest 3 times with no response)..."}
               />
             </div>
 

@@ -1,26 +1,5 @@
 import Link from "next/link";
-
-const footerLinks = {
-  "Quick Links": [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Services", href: "/services" },
-    { name: "Gallery", href: "/gallery" },
-    { name: "Contact", href: "/contact" },
-  ],
-  "Guest Services": [
-    { name: "Book Now", href: "/booking" },
-    { name: "Check Booking", href: "/lookup" },
-    { name: "Staff Portal Login", href: "/login" },
-    { name: "Terms & Conditions", href: "/terms" },
-    { name: "Privacy Policy", href: "/privacy" },
-  ],
-  "Contact Info": [
-    { name: "📍 Bole Road, Addis Ababa", href: "#" },
-    { name: "📞 +251 911 000 000", href: "tel:+251911000000" },
-    { name: "✉️ info@staycrafthotel.com", href: "mailto:info@staycrafthotel.com" },
-  ],
-};
+import { footerNavItems as footerLinks } from "@/config/navigation";
 
 export function Footer() {
   return (

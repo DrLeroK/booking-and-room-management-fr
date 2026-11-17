@@ -334,9 +334,9 @@ export default function AnalyticsPage() {
           {data.daily?.revenue_by_payment_method && Object.keys(data.daily.revenue_by_payment_method).length > 0 ? (
             Object.entries(data.daily.revenue_by_payment_method).map(([method, amount]: [string, any]) => {
               const numAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-              const total = Object.values(data.daily.revenue_by_payment_method).reduce((a: any, b: any) => {
-                const valA = typeof a === 'number' ? a : parseFloat(a) || 0;
-                const valB = typeof b === 'number' ? b : parseFloat(b) || 0;
+              const total: number = Object.values(data.daily.revenue_by_payment_method).reduce<number>((a, b) => {
+                const valA = typeof a === 'number' ? a : parseFloat(String(a)) || 0;
+                const valB = typeof b === 'number' ? b : parseFloat(String(b)) || 0;
                 return valA + valB;
               }, 0);
               const percentage = total > 0 ? (numAmount / total) * 100 : 0;

@@ -4,16 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
-
-const navigation = [
-  { name: "Home", href: "/" },
-  { name: "Booking", href: "/booking" },
-  { name: "Lookup", href: "/lookup" },
-  { name: "About", href: "/about" },
-  { name: "Services", href: "/services" },
-  { name: "Gallery", href: "/gallery" },
-  { name: "Contact", href: "/contact" },
-];
+import { headerNavItems as navigation } from "@/config/navigation";
 
 export function Header() {
   const pathname = usePathname();
