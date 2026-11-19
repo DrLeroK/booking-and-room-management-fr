@@ -95,3 +95,31 @@ export function getBookingStatusBadge(status: string): {
       return { label: status || 'Unknown', variant: 'default', className: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300' };
   }
 }
+
+/**
+ * Normalizes Ethiopian phone numbers to international format (+251...).
+ * Handles 09..., 07..., 9..., 7..., 2519..., 2517..., and +251...
+ */
+export function normalizeEthiopianPhone(phone: string): string {
+  if (!phone) return '';
+  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+
+  // If starts with 09 or 07 and length is 10 digits
+  if (/^0[97]\d{8}$/.test(cleaned)) {
+    return `+251${cleaned.slice(1)}`;
+  }
+  // If starts with 9 or 7 and length is 9 digits
+  if (/^[97]\d{8}$/.test(cleaned)) {
+    return `+251${cleaned}`;
+  }
+  // If starts with 2519 or 2517 and length is 12 digits
+  if (/^251[97]\d{8}$/.test(cleaned)) {
+    return `+${cleaned}`;
+  }
+  // If already +251[97]...
+  if (/^\+251[97]\d{8}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  return cleaned;
+}

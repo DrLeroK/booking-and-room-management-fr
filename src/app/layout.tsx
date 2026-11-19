@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
 import { AppProviders } from '@/providers/app-providers';
 import { PWARegister } from '@/components/common/PWARegister';
-
-const inter = Inter({ subsets: ['latin'] });
 
 const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3007';
 
@@ -170,7 +167,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdStructuredData) }}
         />
       </head>
-      <body className={inter.className}>
+      <body className="font-sans antialiased bg-slate-50 text-slate-900">
         <AppProviders>
           <PWARegister />
           {children}

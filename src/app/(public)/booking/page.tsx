@@ -10,6 +10,7 @@ import { Footer } from "@/components/common/Footer";
 import { bookingAPI, roomAPI, bankAPI } from "@/lib/api/endpoints";
 import toast from "react-hot-toast";
 import { format, addDays, differenceInDays } from "date-fns";
+import { normalizeEthiopianPhone } from "@/lib/utils";
 import {
   CalendarIcon,
   UsersIcon,
@@ -112,6 +113,7 @@ export default function PublicBookingPage() {
   const {
     register: registerGuest,
     handleSubmit: handleGuestSubmit,
+    setValue: setGuestValue,
     formState: { errors: guestErrors },
   } = useForm<GuestFormData>({
     resolver: zodResolver(guestSchema),
@@ -242,9 +244,11 @@ export default function PublicBookingPage() {
     try {
       const formData = new FormData();
 
+      const normalizedPhone = normalizeEthiopianPhone(guestData.phone_number);
+
       formData.append("guest_first_name", guestData.first_name);
       formData.append("guest_last_name", guestData.last_name || "");
-      formData.append("guest_phone_number", guestData.phone_number);
+      formData.append("guest_phone_number", normalizedPhone);
       formData.append("guest_email", guestData.email || "");
       formData.append("identification_type", guestData.identification_type);
       formData.append("identification_number", guestData.identification_number || "");
@@ -261,7 +265,7 @@ export default function PublicBookingPage() {
         formData.append("payment_proof", uploadedFile);
       }
 
-      formData.append("transaction_reference", `BOOK-${guestData.phone_number}-${Date.now()}`);
+      formData.append("transaction_reference", `BOOK-${normalizedPhone}-${Date.now()}`);
 
       const response = await bookingAPI.createOnlineBooking(formData);
 
@@ -625,9 +629,16 @@ export default function PublicBookingPage() {
                     </label>
                     <input
                       type="tel"
-                      {...registerGuest("phone_number")}
+                      {...registerGuest("phone_number", {
+                        onBlur: (e) => {
+                          const normalized = normalizeEthiopianPhone(e.target.value);
+                          if (normalized) {
+                            setGuestValue("phone_number", normalized);
+                          }
+                        },
+                      })}
                       className="input-field"
-                      placeholder="+251 911 000 000"
+                      placeholder="+251 911 000 000 or 0911000000"
                     />
                     {guestErrors.phone_number && (
                       <p className="text-sm text-red-600 mt-1">{guestErrors.phone_number.message}</p>

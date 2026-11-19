@@ -6,6 +6,7 @@ import { Footer } from "@/components/common/Footer";
 import { bookingAPI } from "@/lib/api/endpoints";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
+import { normalizeEthiopianPhone } from "@/lib/utils";
 import {
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -81,10 +82,11 @@ export default function LookupPage() {
     setSearched(true);
 
     try {
-      console.log("Looking up booking with phone:", trimmedPhone);
+      const normalizedPhone = normalizeEthiopianPhone(trimmedPhone);
+      console.log("Looking up booking with phone:", normalizedPhone);
 
       const response = await bookingAPI.lookupBooking({ 
-        phone_number: trimmedPhone 
+        phone_number: normalizedPhone 
       });
       
       const bookingData = response.data?.bookings || [];

@@ -19,6 +19,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { format, addDays, differenceInDays } from "date-fns";
+import { normalizeEthiopianPhone } from "@/lib/utils";
 
 interface Guest {
   id: number;
@@ -165,7 +166,9 @@ export default function CheckInPage() {
     }
     setIsLoading(true);
     try {
-      const response = await guestAPI.createGuest(newGuest);
+      const normalizedPhone = normalizeEthiopianPhone(newGuest.phone_number);
+      const payload = { ...newGuest, phone_number: normalizedPhone };
+      const response = await guestAPI.createGuest(payload);
       setSelectedGuest(response.data);
       toast.success("Guest created successfully!");
       setStep(2);
@@ -188,7 +191,7 @@ export default function CheckInPage() {
         guest: {
           first_name: selectedGuest.first_name,
           last_name: selectedGuest.last_name || "",
-          phone_number: selectedGuest.phone_number,
+          phone_number: normalizeEthiopianPhone(selectedGuest.phone_number),
           email: selectedGuest.email || "",
           identification_type: selectedGuest.identification_type,
           identification_number: selectedGuest.identification_number || "",
@@ -381,8 +384,14 @@ export default function CheckInPage() {
                     type="text"
                     value={newGuest.phone_number}
                     onChange={(e) => setNewGuest({ ...newGuest, phone_number: e.target.value })}
+                    onBlur={(e) => {
+                      const normalized = normalizeEthiopianPhone(e.target.value);
+                      if (normalized) {
+                        setNewGuest((prev) => ({ ...prev, phone_number: normalized }));
+                      }
+                    }}
                     className="input-field"
-                    placeholder="+251 911 000 000"
+                    placeholder="+251 911 000 000 or 0911000000"
                   />
                 </div>
                 <div>
