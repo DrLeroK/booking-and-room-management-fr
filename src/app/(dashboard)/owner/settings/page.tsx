@@ -13,8 +13,13 @@ import {
   XMarkIcon,
   CheckIcon,
   PencilIcon,
+  PlusIcon,
+  TrashIcon,
+  PhotoIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import { getImageUrl } from "@/lib/utils";
 
 interface HotelProfile {
   id: number;
@@ -41,20 +46,43 @@ interface BankDetails {
   updated_at: string;
 }
 
+interface BankAccount {
+  id: number;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  branch_name?: string;
+  swift_code?: string;
+  qr_code?: string;
+  qr_code_url?: string;
+  is_active: boolean;
+  display_order: number;
+  instructions?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"profile" | "bank" | "staff">("profile");
   const [profile, setProfile] = useState<HotelProfile | null>(null);
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isEditingBank, setIsEditingBank] = useState(false);
-  const [bankForm, setBankForm] = useState({
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
+  const [accountForm, setAccountForm] = useState({
     bank_name: "",
     account_name: "",
     account_number: "",
+    branch_name: "",
     swift_code: "",
     instructions: "",
+    display_order: 0,
+    is_active: true,
   });
+  const [qrFile, setQrFile] = useState<File | null>(null);
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -76,9 +104,10 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [profileRes, bankRes] = await Promise.all([
+      const [profileRes, bankRes, accountsRes] = await Promise.all([
         contentAPI.getHotelProfile(),
-        bankAPI.getBankDetails(),
+        bankAPI.getBankDetails().catch(() => ({ data: null })),
+        bankAPI.getBankAccounts().catch(() => ({ data: { results: [] } })),
       ]);
 
       const profileData = profileRes.data;
@@ -95,16 +124,13 @@ export default function SettingsPage() {
         twitter_url: profileData?.twitter_url || "",
         linkedin_url: profileData?.linkedin_url || "",
       });
-      
-      const bankData = bankRes.data;
-      setBankDetails(bankData);
-      setBankForm({
-        bank_name: bankData.bank_name || "",
-        account_name: bankData.account_name || "",
-        account_number: bankData.account_number || "",
-        swift_code: bankData.swift_code || "",
-        instructions: bankData.instructions || "",
-      });
+
+      if (bankRes.data) {
+        setBankDetails(bankRes.data);
+      }
+
+      const accounts = accountsRes.data?.results || (Array.isArray(accountsRes.data) ? accountsRes.data : []);
+      setBankAccounts(accounts);
     } catch (error) {
       console.error("Failed to fetch settings:", error);
       toast.error("Failed to load settings");
@@ -120,30 +146,100 @@ export default function SettingsPage() {
       await contentAPI.updateHotelProfile(profileForm);
       toast.success("Hotel profile updated successfully!");
       fetchSettings();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update profile");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleBankUpdate = async (e: React.FormEvent) => {
+  const openAddAccountModal = () => {
+    setEditingAccount(null);
+    setAccountForm({
+      bank_name: "",
+      account_name: profile?.name || "StayCraft Hotel & Bedroom Resort",
+      account_number: "",
+      branch_name: "",
+      swift_code: "",
+      instructions: "Transfer total stay amount to the account above and upload payment screenshot.",
+      display_order: bankAccounts.length,
+      is_active: true,
+    });
+    setQrFile(null);
+    setQrPreview(null);
+    setIsBankModalOpen(true);
+  };
+
+  const openEditAccountModal = (acc: BankAccount) => {
+    setEditingAccount(acc);
+    setAccountForm({
+      bank_name: acc.bank_name,
+      account_name: acc.account_name,
+      account_number: acc.account_number,
+      branch_name: acc.branch_name || "",
+      swift_code: acc.swift_code || "",
+      instructions: acc.instructions || "",
+      display_order: acc.display_order ?? 0,
+      is_active: acc.is_active,
+    });
+    setQrFile(null);
+    setQrPreview(acc.qr_code_url || acc.qr_code ? getImageUrl(acc.qr_code_url || acc.qr_code || "") : null);
+    setIsBankModalOpen(true);
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await bankAPI.updateBankDetails(bankForm);
-      toast.success("Bank details updated successfully!");
-      setIsEditingBank(false);
+      const formData = new FormData();
+      formData.append("bank_name", accountForm.bank_name);
+      formData.append("account_name", accountForm.account_name);
+      formData.append("account_number", accountForm.account_number);
+      if (accountForm.branch_name) formData.append("branch_name", accountForm.branch_name);
+      if (accountForm.swift_code) formData.append("swift_code", accountForm.swift_code);
+      if (accountForm.instructions) formData.append("instructions", accountForm.instructions);
+      formData.append("display_order", String(accountForm.display_order));
+      formData.append("is_active", String(accountForm.is_active));
+      if (qrFile) {
+        formData.append("qr_code", qrFile);
+      }
+
+      if (editingAccount) {
+        await bankAPI.updateBankAccount(editingAccount.id, formData);
+        toast.success("Bank account updated successfully!");
+      } else {
+        await bankAPI.createBankAccount(formData);
+        toast.success("Bank account added successfully!");
+      }
+
+      setIsBankModalOpen(false);
       fetchSettings();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update bank details");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Failed to save bank account");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleBankInputChange = (field: keyof typeof bankForm, value: string) => {
-    setBankForm(prev => ({ ...prev, [field]: value }));
+  const handleToggleAccountActive = async (acc: BankAccount) => {
+    try {
+      await bankAPI.updateBankAccount(acc.id, { is_active: !acc.is_active });
+      toast.success(`Account marked as ${!acc.is_active ? "active" : "inactive"}`);
+      fetchSettings();
+    } catch {
+      toast.error("Failed to update account status");
+    }
+  };
+
+  const handleDeleteAccount = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this bank account?")) return;
+    try {
+      await bankAPI.deleteBankAccount(id);
+      toast.success("Bank account deleted successfully!");
+      fetchSettings();
+    } catch {
+      toast.error("Failed to delete bank account");
+    }
   };
 
   if (loading) {
@@ -333,119 +429,309 @@ export default function SettingsPage() {
 
       {/* Bank Details Tab */}
       {activeTab === "bank" && (
-        <div className="dashboard-card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex-1">
-              <p className="text-sm text-yellow-800">
-                ⚠️ These bank details are displayed to guests when they make online bookings.
-                Please ensure they are accurate.
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Hotel Bank Accounts</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Manage accounts where guests send booking deposits (CBE, Telebirr, Awash, etc.).
               </p>
             </div>
             <button
-              onClick={() => setIsEditingBank(!isEditingBank)}
-              className="ml-4 btn-secondary flex items-center gap-2 whitespace-nowrap"
+              onClick={openAddAccountModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-sm transition"
             >
-              {isEditingBank ? (
-                <XMarkIcon className="h-4 w-4" />
-              ) : (
-                <PencilIcon className="h-4 w-4" />
-              )}
-              {isEditingBank ? "Cancel" : "Edit Bank Details"}
+              <PlusIcon className="w-4 h-4" />
+              Add Bank Account
             </button>
           </div>
 
-          <form onSubmit={handleBankUpdate} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bank Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={bankForm.bank_name}
-                onChange={(e) => handleBankInputChange('bank_name', e.target.value)}
-                className={`input-field ${!isEditingBank ? 'bg-gray-50' : ''}`}
-                disabled={!isEditingBank}
-                placeholder="e.g., Commercial Bank of Ethiopia"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Account Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={bankForm.account_name}
-                onChange={(e) => handleBankInputChange('account_name', e.target.value)}
-                className={`input-field ${!isEditingBank ? 'bg-gray-50' : ''}`}
-                disabled={!isEditingBank}
-                placeholder="e.g., StayCraft Hotel & Bedroom Resort"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Account Number *
-              </label>
-              <input
-                type="text"
-                required
-                value={bankForm.account_number}
-                onChange={(e) => handleBankInputChange('account_number', e.target.value)}
-                className={`input-field ${!isEditingBank ? 'bg-gray-50' : ''}`}
-                disabled={!isEditingBank}
-                placeholder="e.g., 1000123456789"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                SWIFT Code
-              </label>
-              <input
-                type="text"
-                value={bankForm.swift_code}
-                onChange={(e) => handleBankInputChange('swift_code', e.target.value)}
-                className={`input-field ${!isEditingBank ? 'bg-gray-50' : ''}`}
-                disabled={!isEditingBank}
-                placeholder="e.g., CBETETAA"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Transfer Instructions
-              </label>
-              <textarea
-                value={bankForm.instructions}
-                onChange={(e) => handleBankInputChange('instructions', e.target.value)}
-                className={`input-field resize-none ${!isEditingBank ? 'bg-gray-50' : ''}`}
-                rows={3}
-                disabled={!isEditingBank}
-                placeholder="Instructions for guests to complete the transfer..."
-              />
-            </div>
-
-            {isEditingBank && (
+          {bankAccounts.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 p-8">
+              <CreditCardIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h4 className="font-bold text-slate-900 text-base">No Bank Accounts Found</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                Add your primary bank accounts or mobile money (Telebirr) so online guests can transfer payments.
+              </p>
               <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn-primary w-full disabled:opacity-50"
+                onClick={openAddAccountModal}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition"
               >
-                {isSubmitting ? "Saving..." : "Save Bank Details"}
+                <PlusIcon className="w-4 h-4" />
+                Add First Bank Account
               </button>
-            )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {bankAccounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  className={`bg-white rounded-2xl border p-5 shadow-sm transition-all space-y-4 ${
+                    acc.is_active ? "border-slate-200" : "border-slate-200 opacity-60 bg-slate-50/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-slate-900 text-base">{acc.bank_name}</h4>
+                        <span
+                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                            acc.is_active
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-100 text-slate-600 border-slate-300"
+                          }`}
+                        >
+                          {acc.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      {acc.branch_name && (
+                        <p className="text-xs text-slate-500 mt-0.5">Branch: {acc.branch_name}</p>
+                      )}
+                      <p className="text-xs font-medium text-slate-700 mt-0.5">
+                        Holder: <span className="font-semibold text-slate-900">{acc.account_name}</span>
+                      </p>
+                    </div>
 
-            {!isEditingBank && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  💡 Click the "Edit Bank Details" button to make changes.
-                </p>
+                    {(acc.qr_code_url || acc.qr_code) && (
+                      <div className="p-1 bg-white border border-slate-200 rounded-xl shadow-sm shrink-0">
+                        <img
+                          src={getImageUrl(acc.qr_code_url || acc.qr_code || "")}
+                          alt="Bank QR Code"
+                          className="w-14 h-14 object-contain rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Account Number
+                      </span>
+                      <span className="font-mono font-bold text-slate-900 text-sm">
+                        {acc.account_number}
+                      </span>
+                    </div>
+                    {acc.swift_code && (
+                      <div className="text-right">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          SWIFT
+                        </span>
+                        <span className="font-mono text-xs font-medium text-slate-700">
+                          {acc.swift_code}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {acc.instructions && (
+                    <p className="text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 italic">
+                      {acc.instructions}
+                    </p>
+                  )}
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <button
+                      onClick={() => handleToggleAccountActive(acc)}
+                      className={`font-semibold transition ${
+                        acc.is_active ? "text-amber-600 hover:text-amber-700" : "text-emerald-600 hover:text-emerald-700"
+                      }`}
+                    >
+                      {acc.is_active ? "Deactivate" : "Activate"}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEditAccountModal(acc)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 transition font-medium"
+                      >
+                        <PencilIcon className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAccount(acc.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition font-medium"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add / Edit Bank Account Modal */}
+          {isBankModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
+              <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                  <h3 className="font-bold text-slate-900 text-base">
+                    {editingAccount ? "Edit Bank Account" : "Add New Bank Account"}
+                  </h3>
+                  <button
+                    onClick={() => setIsBankModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+                  >
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveAccount} className="flex-1 overflow-y-auto p-6 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Bank / Provider Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={accountForm.bank_name}
+                      onChange={(e) => setAccountForm({ ...accountForm, bank_name: e.target.value })}
+                      className="input-field text-slate-900 bg-white"
+                      placeholder="e.g. Commercial Bank of Ethiopia (CBE), Telebirr, Awash Bank"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Account Holder Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={accountForm.account_name}
+                      onChange={(e) => setAccountForm({ ...accountForm, account_name: e.target.value })}
+                      className="input-field text-slate-900 bg-white"
+                      placeholder="e.g. StayCraft Hotel & Bedroom Resort"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Account / Phone Number *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={accountForm.account_number}
+                        onChange={(e) => setAccountForm({ ...accountForm, account_number: e.target.value })}
+                        className="input-field text-slate-900 bg-white font-mono"
+                        placeholder="e.g. 1000123456789"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Branch Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={accountForm.branch_name}
+                        onChange={(e) => setAccountForm({ ...accountForm, branch_name: e.target.value })}
+                        className="input-field text-slate-900 bg-white"
+                        placeholder="e.g. Bole Medhanialem Branch"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        SWIFT / BIC Code (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={accountForm.swift_code}
+                        onChange={(e) => setAccountForm({ ...accountForm, swift_code: e.target.value })}
+                        className="input-field text-slate-900 bg-white font-mono"
+                        placeholder="e.g. CBETETAA"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Display Order
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={accountForm.display_order}
+                        onChange={(e) => setAccountForm({ ...accountForm, display_order: Number(e.target.value) })}
+                        className="input-field text-slate-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Transfer Instructions (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={accountForm.instructions}
+                      onChange={(e) => setAccountForm({ ...accountForm, instructions: e.target.value })}
+                      className="input-field text-slate-900 bg-white resize-none"
+                      placeholder="e.g. Transfer the total stay amount and attach receipt screenshot."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Account QR Code Image (Optional)
+                    </label>
+                    <div className="flex items-center gap-4">
+                      {qrPreview && (
+                        <div className="p-1 border border-slate-200 rounded-xl bg-slate-50 shrink-0">
+                          <img src={qrPreview} alt="QR Preview" className="w-16 h-16 object-contain rounded-lg" />
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setQrFile(file);
+                            setQrPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="account_is_active"
+                      checked={accountForm.is_active}
+                      onChange={(e) => setAccountForm({ ...accountForm, is_active: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                    />
+                    <label htmlFor="account_is_active" className="text-xs font-semibold text-slate-800">
+                      Active (Display this account to online guests)
+                    </label>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsBankModalOpen(false)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition shadow-sm disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Saving..." : editingAccount ? "Save Changes" : "Create Account"}
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
-          </form>
+            </div>
+          )}
         </div>
       )}
 

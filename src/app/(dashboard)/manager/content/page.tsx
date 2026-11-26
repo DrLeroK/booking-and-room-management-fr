@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { contentAPI } from "@/lib/api/endpoints";
+import { getImageUrl } from "@/lib/utils";
 import {
   PhotoIcon,
   ChatBubbleLeftRightIcon,
@@ -11,6 +12,9 @@ import {
   TrashIcon,
   StarIcon,
   XMarkIcon,
+  BuildingOffice2Icon,
+  GlobeAltIcon,
+  LinkIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import apiClient from "@/lib/api/client";
@@ -35,16 +39,39 @@ interface FAQ {
   display_order: number;
 }
 
+interface GalleryCategory {
+  id: number;
+  name: string;
+  slug: string;
+  display_order: number;
+}
+
 interface GalleryItem {
   id: number;
   title: string;
   caption: string;
+  image?: string;
   image_url?: string;
+  category?: number;
+  category_name?: string;
   is_active: boolean;
+  display_order: number;
   created_at: string;
 }
 
-type ContentTab = "testimonials" | "faqs" | "gallery";
+interface Partner {
+  id: number;
+  name: string;
+  logo?: string;
+  logo_url?: string;
+  website_url?: string;
+  description?: string;
+  category: string;
+  is_active: boolean;
+  display_order: number;
+}
+
+type ContentTab = "testimonials" | "faqs" | "gallery" | "partners";
 
 // FAQ API methods using apiClient
 const faqAPI = {
@@ -56,7 +83,10 @@ const faqAPI = {
 
 // Gallery API methods using apiClient
 const galleryAPI = {
-  getGallery: () => apiClient.get<{ results: GalleryItem[] }>('/content/gallery/'),
+  getGallery: (category?: string) =>
+    apiClient.get<{ results: GalleryItem[] }>(
+      category && category !== 'All' ? `/content/gallery/?category=${encodeURIComponent(category)}` : '/content/gallery/'
+    ),
   createGallery: (data: FormData) => apiClient.post<GalleryItem>('/content/gallery/', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
@@ -66,15 +96,41 @@ const galleryAPI = {
   deleteGallery: (id: number) => apiClient.delete(`/content/gallery/${id}/`),
 };
 
+// Category API methods
+const categoryAPI = {
+  getCategories: () => apiClient.get<{ results: GalleryCategory[] }>('/content/gallery-categories/'),
+  createCategory: (name: string) => apiClient.post<GalleryCategory>('/content/gallery-categories/', {
+    name,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+  }),
+};
+
+// Partner API methods
+const partnerAPI = {
+  getPartners: () => apiClient.get<{ results: Partner[] }>('/content/partners/'),
+  createPartner: (data: FormData) => apiClient.post<Partner>('/content/partners/', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updatePartner: (id: number, data: FormData) => apiClient.patch<Partner>(`/content/partners/${id}/`, data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deletePartner: (id: number) => apiClient.delete(`/content/partners/${id}/`),
+};
+
 export default function ContentManagementPage() {
   const [activeTab, setActiveTab] = useState<ContentTab>("testimonials");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [categories, setCategories] = useState<GalleryCategory[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [galleryCategoryFilter, setGalleryCategoryFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
 
   // Form states for different tabs
   const [testimonialForm, setTestimonialForm] = useState({
@@ -97,11 +153,23 @@ export default function ContentManagementPage() {
   const [galleryForm, setGalleryForm] = useState({
     title: "",
     caption: "",
+    category: "" as string | number,
     is_active: true,
     display_order: 0,
   });
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
   const [galleryPreview, setGalleryPreview] = useState<string | null>(null);
+
+  const [partnerForm, setPartnerForm] = useState({
+    name: "",
+    website_url: "",
+    description: "",
+    category: "Corporate Partner",
+    is_active: true,
+    display_order: 0,
+  });
+  const [partnerFile, setPartnerFile] = useState<File | null>(null);
+  const [partnerPreview, setPartnerPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchContent();
@@ -110,15 +178,19 @@ export default function ContentManagementPage() {
   const fetchContent = async () => {
     setLoading(true);
     try {
-      const [testimonialsRes, faqsRes, galleryRes] = await Promise.all([
+      const [testimonialsRes, faqsRes, galleryRes, catRes, partnersRes] = await Promise.all([
         contentAPI.getTestimonials(),
         faqAPI.getFAQs(),
         galleryAPI.getGallery(),
+        categoryAPI.getCategories().catch(() => ({ data: { results: [] } })),
+        partnerAPI.getPartners().catch(() => ({ data: { results: [] } })),
       ]);
 
       setTestimonials(testimonialsRes.data?.results || []);
       setFaqs(faqsRes.data?.results || []);
       setGallery(galleryRes.data?.results || []);
+      setCategories(catRes.data?.results || []);
+      setPartners(partnersRes.data?.results || []);
     } catch (error: any) {
       console.error("Failed to fetch content:", error);
       toast.error(error.response?.data?.message || "Failed to load content");
@@ -152,18 +224,35 @@ export default function ContentManagementPage() {
     setGalleryForm({
       title: "",
       caption: "",
+      category: "",
       is_active: true,
       display_order: 0,
     });
     setGalleryFile(null);
     setGalleryPreview(null);
+    setShowNewCategoryInput(false);
+    setNewCategoryName("");
+  };
+
+  const resetPartnerForm = () => {
+    setPartnerForm({
+      name: "",
+      website_url: "",
+      description: "",
+      category: "Corporate Partner",
+      is_active: true,
+      display_order: 0,
+    });
+    setPartnerFile(null);
+    setPartnerPreview(null);
   };
 
   const openCreateModal = () => {
     setEditingItem(null);
     if (activeTab === "testimonials") resetTestimonialForm();
     else if (activeTab === "faqs") resetFaqForm();
-    else resetGalleryForm();
+    else if (activeTab === "gallery") resetGalleryForm();
+    else resetPartnerForm();
     setShowModal(true);
   };
 
@@ -186,14 +275,26 @@ export default function ContentManagementPage() {
         is_active: item.is_active,
         display_order: item.display_order,
       });
-    } else {
+    } else if (activeTab === "gallery") {
       setGalleryForm({
         title: item.title,
         caption: item.caption || "",
+        category: item.category || "",
         is_active: item.is_active,
         display_order: item.display_order || 0,
       });
-      setGalleryPreview(item.image_url || null);
+      setGalleryPreview(getImageUrl(item.image_url || item.image) || null);
+      setShowNewCategoryInput(false);
+    } else {
+      setPartnerForm({
+        name: item.name,
+        website_url: item.website_url || "",
+        description: item.description || "",
+        category: item.category || "Corporate Partner",
+        is_active: item.is_active,
+        display_order: item.display_order || 0,
+      });
+      setPartnerPreview(getImageUrl(item.logo_url || item.logo) || null);
     }
     setShowModal(true);
   };
@@ -238,6 +339,23 @@ export default function ContentManagementPage() {
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error("Please enter a category name");
+      return;
+    }
+    try {
+      const res = await categoryAPI.createCategory(newCategoryName.trim());
+      setCategories((prev) => [...prev, res.data]);
+      setGalleryForm((prev) => ({ ...prev, category: res.data.id }));
+      setNewCategoryName("");
+      setShowNewCategoryInput(false);
+      toast.success(`Category "${res.data.name}" created!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to create category");
+    }
+  };
+
   const handleGallerySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -251,6 +369,9 @@ export default function ContentManagementPage() {
       const formData = new FormData();
       formData.append("title", galleryForm.title);
       formData.append("caption", galleryForm.caption || "");
+      if (galleryForm.category) {
+        formData.append("category", String(galleryForm.category));
+      }
       formData.append("is_active", String(galleryForm.is_active));
       formData.append("display_order", String(galleryForm.display_order || 0));
       
@@ -269,6 +390,38 @@ export default function ContentManagementPage() {
       fetchContent();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to save gallery item");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePartnerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", partnerForm.name);
+      formData.append("website_url", partnerForm.website_url || "");
+      formData.append("description", partnerForm.description || "");
+      formData.append("category", partnerForm.category || "Corporate Partner");
+      formData.append("is_active", String(partnerForm.is_active));
+      formData.append("display_order", String(partnerForm.display_order || 0));
+
+      if (partnerFile) {
+        formData.append("logo", partnerFile);
+      }
+
+      if (editingItem) {
+        await partnerAPI.updatePartner(editingItem.id, formData);
+        toast.success("Partner updated successfully!");
+      } else {
+        await partnerAPI.createPartner(formData);
+        toast.success("Partner created successfully!");
+      }
+      setShowModal(false);
+      fetchContent();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to save partner");
     } finally {
       setIsSubmitting(false);
     }
@@ -294,6 +447,26 @@ export default function ContentManagementPage() {
     }
   };
 
+  const handlePartnerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file");
+        return;
+      }
+      setPartnerFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPartnerPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleDeleteItem = async (id: number, type: string) => {
     if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
     try {
@@ -301,8 +474,10 @@ export default function ContentManagementPage() {
         await contentAPI.deleteTestimonial(id);
       } else if (type === 'faq') {
         await faqAPI.deleteFAQ(id);
-      } else {
+      } else if (type === 'gallery') {
         await galleryAPI.deleteGallery(id);
+      } else {
+        await partnerAPI.deletePartner(id);
       }
       toast.success(`${type} deleted successfully`);
       fetchContent();
@@ -322,7 +497,14 @@ export default function ContentManagementPage() {
 
   const getModalTitle = () => {
     const action = editingItem ? "Edit" : "Add New";
-    const type = activeTab === "testimonials" ? "Testimonial" : activeTab === "faqs" ? "FAQ" : "Gallery Item";
+    const type =
+      activeTab === "testimonials"
+        ? "Testimonial"
+        : activeTab === "faqs"
+        ? "FAQ"
+        : activeTab === "gallery"
+        ? "Gallery Image"
+        : "Trusted Partner";
     return `${action} ${type}`;
   };
 
@@ -343,24 +525,33 @@ export default function ContentManagementPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Content Management</h2>
-          <p className="text-sm text-gray-500">Manage testimonials, FAQs, and gallery</p>
+          <p className="text-sm text-gray-500">Manage testimonials, FAQs, gallery, and trusted partners</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="btn-primary flex items-center gap-2"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Add {activeTab === "testimonials" ? "Testimonial" : activeTab === "faqs" ? "FAQ" : "Image"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="/manager/rooms/types"
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <BuildingOffice2Icon className="h-4 w-4" />
+            Manage Room Display
+          </a>
+          <button
+            onClick={openCreateModal}
+            className="btn-primary flex items-center gap-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Add {activeTab === "testimonials" ? "Testimonial" : activeTab === "faqs" ? "FAQ" : activeTab === "gallery" ? "Image" : "Partner"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab("testimonials")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "testimonials"
-              ? "border-blue-600 text-blue-600"
+              ? "border-blue-600 text-blue-600 font-semibold"
               : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
           }`}
         >
@@ -371,9 +562,9 @@ export default function ContentManagementPage() {
         </button>
         <button
           onClick={() => setActiveTab("faqs")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "faqs"
-              ? "border-blue-600 text-blue-600"
+              ? "border-blue-600 text-blue-600 font-semibold"
               : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
           }`}
         >
@@ -384,15 +575,28 @@ export default function ContentManagementPage() {
         </button>
         <button
           onClick={() => setActiveTab("gallery")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
             activeTab === "gallery"
-              ? "border-blue-600 text-blue-600"
+              ? "border-blue-600 text-blue-600 font-semibold"
               : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
           }`}
         >
           <div className="flex items-center gap-2">
             <PhotoIcon className="h-4 w-4" />
             Gallery ({gallery.length})
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab("partners")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+            activeTab === "partners"
+              ? "border-blue-600 text-blue-600 font-semibold"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <GlobeAltIcon className="h-4 w-4" />
+            Trusted Partners ({partners.length})
           </div>
         </button>
       </div>
@@ -503,51 +707,89 @@ export default function ContentManagementPage() {
       {/* Gallery Tab */}
       {activeTab === "gallery" && (
         <div className="space-y-4">
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap gap-2 items-center bg-white p-3 rounded-xl border border-gray-200">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Filter Category:</span>
+            <button
+              onClick={() => setGalleryCategoryFilter("All")}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                galleryCategoryFilter === "All"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              All ({gallery.length})
+            </button>
+            {categories.map((cat) => {
+              const count = gallery.filter((g) => g.category === cat.id || g.category_name === cat.name).length;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setGalleryCategoryFilter(cat.name)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    galleryCategoryFilter === cat.name
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {cat.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {gallery.map((item) => (
-              <div key={item.id} className="dashboard-card overflow-hidden">
-                <div className="relative aspect-square bg-gray-100">
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <PhotoIcon className="h-12 w-12 text-gray-400" />
+            {gallery
+              .filter((item) => galleryCategoryFilter === "All" || item.category_name === galleryCategoryFilter)
+              .map((item) => (
+                <div key={item.id} className="dashboard-card overflow-hidden">
+                  <div className="relative aspect-square bg-gray-100">
+                    {(item.image_url || item.image) ? (
+                      <img
+                        src={getImageUrl(item.image_url || item.image)}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <PhotoIcon className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                      <span className={`badge ${item.is_active ? 'badge-success' : 'badge-danger'} shadow-sm`}>
+                        {item.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      {item.category_name && (
+                        <span className="badge badge-info text-[10px] bg-blue-700 text-white shadow-sm font-semibold">
+                          {item.category_name}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    <span className={`badge ${item.is_active ? 'badge-success' : 'badge-danger'}`}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                  </div>
+                  <div className="p-4">
+                    <h4 className="font-semibold text-gray-900">{item.title}</h4>
+                    {item.caption && (
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.caption}</p>
+                    )}
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        onClick={() => openEditModal(item)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id, 'gallery')}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="p-4">
-                  <h4 className="font-semibold text-gray-900">{item.title}</h4>
-                  {item.caption && (
-                    <p className="text-sm text-gray-500 mt-1">{item.caption}</p>
-                  )}
-                  <div className="mt-3 flex justify-end gap-2">
-                    <button
-                      onClick={() => openEditModal(item)}
-                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Edit"
-                    >
-                      <PencilIcon className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteItem(item.id, 'gallery')}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Delete"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
           {gallery.length === 0 && (
             <div className="text-center py-12">
@@ -558,12 +800,89 @@ export default function ContentManagementPage() {
         </div>
       )}
 
+      {/* Partners Tab */}
+      {activeTab === "partners" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {partners.map((partner) => (
+              <div key={partner.id} className="dashboard-card overflow-hidden flex flex-col justify-between">
+                <div>
+                  <div className="h-28 bg-slate-50 border-b border-gray-100 p-4 flex items-center justify-center relative">
+                    {(partner.logo_url || partner.logo) ? (
+                      <img
+                        src={getImageUrl(partner.logo_url || partner.logo)}
+                        alt={partner.name}
+                        className="max-h-20 max-w-full object-contain"
+                      />
+                    ) : (
+                      <GlobeAltIcon className="h-12 w-12 text-gray-400" />
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <span className={`badge ${partner.is_active ? 'badge-success' : 'badge-danger'}`}>
+                        {partner.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-semibold text-gray-900">{partner.name}</h4>
+                    </div>
+                    <span className="badge badge-info text-xs mt-1 inline-block">
+                      {partner.category || "Corporate Partner"}
+                    </span>
+                    {partner.description && (
+                      <p className="text-xs text-gray-500 mt-2 line-clamp-2">{partner.description}</p>
+                    )}
+                    {partner.website_url && (
+                      <a
+                        href={partner.website_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-blue-600 hover:underline mt-2 flex items-center gap-1"
+                      >
+                        <LinkIcon className="h-3 w-3" />
+                        Visit Website
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="p-4 pt-0 border-t border-gray-100 flex justify-between items-center mt-2">
+                  <span className="text-xs text-gray-400">Order: {partner.display_order}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEditModal(partner)}
+                      className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="Edit"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(partner.id, 'partner')}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Delete"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {partners.length === 0 && (
+            <div className="text-center py-12">
+              <GlobeAltIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No trusted partners found. Add your first partner!</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">{getModalTitle()}</h3>
+              <h3 className="text-xl font-bold text-slate-900">{getModalTitle()}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -757,7 +1076,7 @@ export default function ContentManagementPage() {
                       <img
                         src={galleryPreview}
                         alt="Preview"
-                        className="max-h-48 rounded-lg mx-auto"
+                        className="max-h-48 rounded-lg mx-auto object-contain"
                       />
                       <button
                         type="button"
@@ -773,8 +1092,8 @@ export default function ContentManagementPage() {
                   ) : (
                     <>
                       <PhotoIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Click to upload image</p>
-                      <p className="text-xs text-gray-400">PNG, JPG, WEBP up to 5MB</p>
+                      <p className="text-sm text-gray-700 font-medium">Click to upload photo</p>
+                      <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
                     </>
                   )}
                   <input
@@ -789,14 +1108,14 @@ export default function ContentManagementPage() {
                       htmlFor="gallery-file-upload"
                       className="inline-block mt-3 btn-secondary text-sm cursor-pointer"
                     >
-                      Choose Image
+                      Choose Photo
                     </label>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
+                    Photo Title *
                   </label>
                   <input
                     type="text"
@@ -804,30 +1123,91 @@ export default function ContentManagementPage() {
                     value={galleryForm.title}
                     onChange={(e) => setGalleryForm({ ...galleryForm, title: e.target.value })}
                     className="input-field"
-                    placeholder="e.g., Deluxe Suite"
+                    placeholder="e.g., Deluxe Presidential Suite"
                   />
                 </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Category *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewCategoryInput(!showNewCategoryInput)}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      {showNewCategoryInput ? "Choose existing" : "+ New category"}
+                    </button>
+                  </div>
+                  {showNewCategoryInput ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="e.g., Deluxe Suites"
+                        className="input-field flex-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        className="btn-secondary text-xs px-3"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={galleryForm.category}
+                      onChange={(e) => setGalleryForm({ ...galleryForm, category: e.target.value })}
+                      className="input-field"
+                    >
+                      <option value="">Select Category (Optional)</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Caption
+                    Caption / Description
                   </label>
                   <input
                     type="text"
                     value={galleryForm.caption}
                     onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
                     className="input-field"
-                    placeholder="Brief description of the image"
+                    placeholder="Brief description of the room or facility"
                   />
                 </div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={galleryForm.is_active}
-                    onChange={(e) => setGalleryForm({ ...galleryForm, is_active: e.target.checked })}
-                    className="h-4 w-4 text-blue-600 rounded"
-                  />
-                  <span className="text-sm text-gray-700">Active</span>
-                </label>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={galleryForm.is_active}
+                      onChange={(e) => setGalleryForm({ ...galleryForm, is_active: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm text-gray-700">Active</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600">Display Order:</label>
+                    <input
+                      type="number"
+                      value={galleryForm.display_order}
+                      onChange={(e) => setGalleryForm({ ...galleryForm, display_order: parseInt(e.target.value) || 0 })}
+                      className="input-field w-20 py-1 text-sm"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <button
                     type="button"
@@ -841,7 +1221,146 @@ export default function ContentManagementPage() {
                     disabled={isSubmitting}
                     className="btn-primary flex-1 disabled:opacity-50"
                   >
-                    {isSubmitting ? "Uploading..." : (editingItem ? "Update" : "Upload")}
+                    {isSubmitting ? "Uploading..." : (editingItem ? "Update Photo" : "Upload Photo")}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {activeTab === "partners" && (
+              <form onSubmit={handlePartnerSubmit} className="space-y-4">
+                <div className={`border-2 border-dashed rounded-lg p-6 text-center ${partnerPreview ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}`}>
+                  {partnerPreview ? (
+                    <div className="relative">
+                      <img
+                        src={partnerPreview}
+                        alt="Partner Logo Preview"
+                        className="max-h-32 rounded-lg mx-auto object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPartnerPreview(null);
+                          setPartnerFile(null);
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <GlobeAltIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-700 font-medium">Click to upload partner logo</p>
+                      <p className="text-xs text-gray-500">PNG, JPG, SVG, WEBP up to 5MB</p>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePartnerFileChange}
+                    className="hidden"
+                    id="partner-file-upload"
+                  />
+                  {!partnerPreview && (
+                    <label
+                      htmlFor="partner-file-upload"
+                      className="inline-block mt-3 btn-secondary text-sm cursor-pointer"
+                    >
+                      Choose Logo
+                    </label>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Partner Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={partnerForm.name}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, name: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g., Ethiopian Airlines"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Partner Category
+                  </label>
+                  <input
+                    type="text"
+                    value={partnerForm.category}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, category: e.target.value })}
+                    className="input-field"
+                    placeholder="e.g., Airline Partner, Banking Partner, Corporate Sponsor"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Website URL
+                  </label>
+                  <input
+                    type="url"
+                    value={partnerForm.website_url}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, website_url: e.target.value })}
+                    className="input-field"
+                    placeholder="https://example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={partnerForm.description}
+                    onChange={(e) => setPartnerForm({ ...partnerForm, description: e.target.value })}
+                    className="input-field resize-none"
+                    rows={2}
+                    placeholder="Brief description or sponsorship collaboration details..."
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={partnerForm.is_active}
+                      onChange={(e) => setPartnerForm({ ...partnerForm, is_active: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 rounded"
+                    />
+                    <span className="text-sm text-gray-700">Active</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-gray-600">Display Order:</label>
+                    <input
+                      type="number"
+                      value={partnerForm.display_order}
+                      onChange={(e) => setPartnerForm({ ...partnerForm, display_order: parseInt(e.target.value) || 0 })}
+                      className="input-field w-20 py-1 text-sm"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-primary flex-1 disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Saving..." : (editingItem ? "Update Partner" : "Create Partner")}
                   </button>
                 </div>
               </form>

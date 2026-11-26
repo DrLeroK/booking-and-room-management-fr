@@ -90,6 +90,13 @@ export const roomAPI = {
 
   deleteAmenity: (id: number) =>
     api.delete(`/rooms/amenities/${id}/`),
+
+  // Room Temporary Hold (10-minute hold for online checkout)
+  createRoomHold: (data: { room: number; check_in_date: string; check_out_date: string; session_id: string }) =>
+    api.post<any>('/rooms/holds/', data),
+
+  releaseRoomHold: (data: { session_id?: string; hold_id?: number }) =>
+    api.post<any>('/rooms/holds/release/', data),
 };
 
 // ============ GUEST ENDPOINTS ============
@@ -185,6 +192,9 @@ export const bookingAPI = {
       swift_code: string;
       instructions: string;
     }>('/bookings/hotel-bank-details/'),
+
+  getPendingVerification: () =>
+    api.get<{ count: number; results: any[] }>('/bookings/pending-verification/'),
 
   lookupBooking: (params: { phone_number: string; booking_reference?: string }) =>
     api.get<{ count: number; bookings: any[] }>('/bookings/online-lookup/', { params }),
@@ -380,5 +390,22 @@ export const bankAPI = {
       account_number: string;
       swift_code: string;
       instructions: string;
+      accounts?: any[];
     }>('/content/public-bank-details/'),
+
+  getBankAccounts: () =>
+    api.get<{ results: any[] }>('/content/bank-accounts/'),
+
+  createBankAccount: (data: FormData | any) =>
+    api.post<any>('/content/bank-accounts/', data, {
+      headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    }),
+
+  updateBankAccount: (id: number, data: FormData | any) =>
+    api.patch<any>(`/content/bank-accounts/${id}/`, data, {
+      headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    }),
+
+  deleteBankAccount: (id: number) =>
+    api.delete(`/content/bank-accounts/${id}/`),
 };

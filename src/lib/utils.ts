@@ -123,3 +123,21 @@ export function normalizeEthiopianPhone(phone: string): string {
 
   return cleaned;
 }
+
+/**
+ * Safely resolves media URLs from Cloudflare R2 / S3 or local Django media server.
+ * Strips accidental leading slashes before absolute URLs (e.g. /https:// -> https://).
+ */
+export function getImageUrl(path?: string | null): string {
+  if (!path) return '';
+  const trimmed = path.trim();
+  // Strip accidental leading slashes before http:// or https://
+  const sanitized = trimmed.replace(/^\/+(https?:\/\/)/i, '$1');
+  if (sanitized.startsWith('http://') || sanitized.startsWith('https://')) {
+    return sanitized;
+  }
+  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  const baseUrl = apiUrl.replace('/api/v1', '');
+  return `${baseUrl}${sanitized.startsWith('/') ? '' : '/'}${sanitized}`;
+}
+

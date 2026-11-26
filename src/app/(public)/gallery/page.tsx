@@ -6,6 +6,7 @@ import { Footer } from "@/components/common/Footer";
 import { XMarkIcon, PhotoIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { motion, AnimatePresence } from "framer-motion";
 import { contentAPI } from "@/lib/api/endpoints";
+import { getImageUrl } from "@/lib/utils";
 
 interface BackendGalleryItem {
   id: number;
@@ -13,16 +14,9 @@ interface BackendGalleryItem {
   category?: any;
   category_name?: string;
   image?: string;
+  image_url?: string;
   caption?: string;
 }
-
-const getImageUrl = (path?: string) => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  const baseUrl = apiUrl.replace("/api/v1", "");
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
 
 export default function GalleryPage() {
   const [items, setItems] = useState<BackendGalleryItem[]>([]);
@@ -139,7 +133,7 @@ export default function GalleryPage() {
           >
             {filteredItems.map((item, index) => {
               const catName = getCategoryName(item);
-              const imgSrc = getImageUrl(item.image);
+              const imgSrc = getImageUrl(item.image_url || item.image);
 
               return (
                 <motion.div
@@ -219,9 +213,9 @@ export default function GalleryPage() {
 
                 {/* Image Content */}
                 <div className="max-h-[75vh] flex items-center justify-center overflow-hidden rounded-2xl bg-slate-900 border border-slate-800">
-                  {selectedImage.image ? (
+                  {(selectedImage.image_url || selectedImage.image) ? (
                     <img
-                      src={getImageUrl(selectedImage.image)}
+                      src={getImageUrl(selectedImage.image_url || selectedImage.image)}
                       alt={selectedImage.title}
                       className="max-h-[70vh] w-auto object-contain mx-auto rounded-lg"
                     />

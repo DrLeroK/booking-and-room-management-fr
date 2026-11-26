@@ -10,7 +10,7 @@ import { Footer } from "@/components/common/Footer";
 import { bookingAPI, roomAPI, bankAPI } from "@/lib/api/endpoints";
 import toast from "react-hot-toast";
 import { format, addDays, differenceInDays } from "date-fns";
-import { normalizeEthiopianPhone } from "@/lib/utils";
+import { normalizeEthiopianPhone, getImageUrl } from "@/lib/utils";
 import {
   CalendarIcon,
   UsersIcon,
@@ -26,6 +26,10 @@ import {
   BanknotesIcon,
   ExclamationTriangleIcon,
   PhoneIcon,
+  ClockIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
 // Validation schemas
@@ -71,13 +75,17 @@ interface Room {
   status: string;
 }
 
-interface BankDetails {
+interface BankAccount {
   id: number;
   bank_name: string;
   account_name: string;
   account_number: string;
-  swift_code: string;
-  instructions: string;
+  branch_name?: string;
+  swift_code?: string;
+  instructions?: string;
+  qr_code?: string;
+  qr_code_url?: string;
+  is_active?: boolean;
 }
 
 export default function PublicBookingPage() {
@@ -87,13 +95,21 @@ export default function PublicBookingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+  const [bankDetails, setBankDetails] = useState<BankAccount | null>(null);
+  const [allBankAccounts, setAllBankAccounts] = useState<BankAccount[]>([]);
+  const [selectedBankId, setSelectedBankId] = useState<number | null>(null);
+  const [copiedBankId, setCopiedBankId] = useState<number | null>(null);
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [nights, setNights] = useState(0);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [onlineSalesClosed, setOnlineSalesClosed] = useState(false);
   const [onlineNotice, setOnlineNotice] = useState<string | null>(null);
+
+  // 10-Minute Temporary Hold state
+  const [sessionId, setSessionId] = useState<string>("");
+  const [holdExpiresAt, setHoldExpiresAt] = useState<number | null>(null);
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const {
     register: registerBooking,
@@ -114,6 +130,7 @@ export default function PublicBookingPage() {
     register: registerGuest,
     handleSubmit: handleGuestSubmit,
     setValue: setGuestValue,
+    watch: watchGuest,
     formState: { errors: guestErrors },
   } = useForm<GuestFormData>({
     resolver: zodResolver(guestSchema),
@@ -125,6 +142,102 @@ export default function PublicBookingPage() {
   const checkInDate = watchBooking("check_in_date");
   const checkOutDate = watchBooking("check_out_date");
   const guestsCount = watchBooking("guests_count");
+  const guestFirstName = watchGuest("first_name");
+  const guestLastName = watchGuest("last_name");
+  const guestPhone = watchGuest("phone_number");
+  const guestEmail = watchGuest("email");
+
+  // Initialize session ID
+  useEffect(() => {
+    let sid = typeof window !== "undefined" ? sessionStorage.getItem("hotel_booking_session_id") : null;
+    if (!sid) {
+      sid = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      sessionStorage.setItem("hotel_booking_session_id", sid);
+    }
+    setSessionId(sid);
+  }, []);
+
+  // Restore draft from localStorage on initial load
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("hotel_booking_draft");
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (draft.checkInDate) setBookingValue("check_in_date", draft.checkInDate);
+        if (draft.checkOutDate) setBookingValue("check_out_date", draft.checkOutDate);
+        if (draft.guestsCount) setBookingValue("guests_count", draft.guestsCount);
+        if (draft.selectedRoom) setSelectedRoom(draft.selectedRoom);
+        if (draft.guestData) {
+          if (draft.guestData.first_name) setGuestValue("first_name", draft.guestData.first_name);
+          if (draft.guestData.last_name) setGuestValue("last_name", draft.guestData.last_name);
+          if (draft.guestData.phone_number) setGuestValue("phone_number", draft.guestData.phone_number);
+          if (draft.guestData.email) setGuestValue("email", draft.guestData.email);
+          if (draft.guestData.identification_type) setGuestValue("identification_type", draft.guestData.identification_type);
+          if (draft.guestData.identification_number) setGuestValue("identification_number", draft.guestData.identification_number);
+          if (draft.guestData.address) setGuestValue("address", draft.guestData.address);
+        }
+        if (draft.holdExpiresAt && draft.holdExpiresAt > Date.now()) {
+          setHoldExpiresAt(draft.holdExpiresAt);
+          if (draft.step) setStep(draft.step);
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [setBookingValue, setGuestValue]);
+
+  // Auto-save draft to localStorage whenever form values change
+  useEffect(() => {
+    if (step >= 2 && selectedRoom) {
+      try {
+        const draft = {
+          checkInDate,
+          checkOutDate,
+          guestsCount,
+          selectedRoom,
+          holdExpiresAt,
+          step,
+          guestData: {
+            first_name: guestFirstName,
+            last_name: guestLastName,
+            phone_number: guestPhone,
+            email: guestEmail,
+          },
+        };
+        localStorage.setItem("hotel_booking_draft", JSON.stringify(draft));
+      } catch {}
+    }
+  }, [checkInDate, checkOutDate, guestsCount, selectedRoom, holdExpiresAt, step, guestFirstName, guestLastName, guestPhone, guestEmail]);
+
+  // 10-Minute Hold Countdown Timer
+  useEffect(() => {
+    if (!holdExpiresAt) {
+      setSecondsRemaining(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const diff = Math.floor((holdExpiresAt - Date.now()) / 1000);
+      if (diff <= 0) {
+        setSecondsRemaining(0);
+        setHoldExpiresAt(null);
+        toast.error("Your 10-minute room lock has expired. The room has been released to other guests.", {
+          duration: 6000,
+        });
+        if (step === 3) {
+          setStep(2);
+        }
+      } else {
+        setSecondsRemaining(diff);
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [holdExpiresAt, step]);
 
   useEffect(() => {
     const roomId = searchParams.get("room");
@@ -135,10 +248,7 @@ export default function PublicBookingPage() {
 
   useEffect(() => {
     if (selectedRoom && checkInDate && checkOutDate) {
-      const days = differenceInDays(
-        new Date(checkOutDate),
-        new Date(checkInDate)
-      );
+      const days = differenceInDays(new Date(checkOutDate), new Date(checkInDate));
       const nightsCount = days > 0 ? days : 1;
       setNights(nightsCount);
       setCalculatedTotal(selectedRoom.effective_price_per_night * nightsCount);
@@ -148,8 +258,29 @@ export default function PublicBookingPage() {
   useEffect(() => {
     const fetchBankDetails = async () => {
       try {
-        const response = await bankAPI.getPublicBankDetails();
-        setBankDetails(response.data);
+        const [pubRes, accountsRes] = await Promise.all([
+          bankAPI.getPublicBankDetails().catch(() => ({ data: null })),
+          bankAPI.getBankAccounts().catch(() => ({ data: { results: [] } })),
+        ]);
+
+        if (pubRes?.data) {
+          setBankDetails(pubRes.data);
+        }
+
+        const accounts =
+          accountsRes?.data?.results ||
+          (Array.isArray(accountsRes?.data) ? accountsRes.data : []) ||
+          pubRes?.data?.accounts ||
+          [];
+
+        if (accounts.length > 0) {
+          const activeOnes = accounts.filter((a: any) => a.is_active !== false);
+          setAllBankAccounts(activeOnes);
+          setSelectedBankId(activeOnes[0]?.id || null);
+        } else if (pubRes?.data?.bank_name) {
+          setAllBankAccounts([pubRes.data]);
+          setSelectedBankId(pubRes.data.id || 1);
+        }
       } catch (error) {
         console.error("Failed to fetch bank details:", error);
       }
@@ -202,6 +333,52 @@ export default function PublicBookingPage() {
 
   const handleRoomSelect = (room: Room) => {
     setSelectedRoom(room);
+  };
+
+  const proceedToGuestDetails = async () => {
+    if (!selectedRoom) {
+      toast.error("Please select a room");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      // Place 10-minute hold
+      await roomAPI.createRoomHold({
+        room: selectedRoom.id,
+        check_in_date: checkInDate,
+        check_out_date: checkOutDate,
+        session_id: sessionId,
+      });
+      const expires = Date.now() + 10 * 60 * 1000;
+      setHoldExpiresAt(expires);
+      setStep(3);
+      toast.success("Room locked for 10 minutes! Please complete your booking before the timer expires.");
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.error ||
+        "This room is currently reserved or locked by another guest. Please select another room.";
+      toast.error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetForm = async () => {
+    if (sessionId) {
+      try {
+        await roomAPI.releaseRoomHold({ session_id: sessionId });
+      } catch {}
+    }
+    try {
+      localStorage.removeItem("hotel_booking_draft");
+    } catch {}
+    setSelectedRoom(null);
+    setHoldExpiresAt(null);
+    setSecondsRemaining(null);
+    setUploadedFile(null);
+    setUploadPreview(null);
+    setStep(1);
+    toast.success("Booking form reset and room hold released.");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,6 +437,9 @@ export default function PublicBookingPage() {
       formData.append("adults_count", guestsCount.toString());
       formData.append("children_count", "0");
       formData.append("special_requests", "");
+      if (sessionId) {
+        formData.append("session_id", sessionId);
+      }
 
       if (uploadedFile) {
         formData.append("payment_proof", uploadedFile);
@@ -276,6 +456,11 @@ export default function PublicBookingPage() {
       );
 
       sessionStorage.setItem("last_booking_ref", response.data.booking?.booking_reference || "");
+      try {
+        localStorage.removeItem("hotel_booking_draft");
+      } catch {}
+      setHoldExpiresAt(null);
+      setSecondsRemaining(null);
 
       setStep(4);
     } catch (error: any) {
@@ -345,6 +530,39 @@ export default function PublicBookingPage() {
             ))}
           </div>
         </div>
+
+        {/* 10-Minute Room Lock Banner */}
+        {secondsRemaining !== null && secondsRemaining > 0 && selectedRoom && (
+          <div className="max-w-3xl mx-auto mb-6 bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm text-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500 text-white rounded-xl shadow-sm shrink-0">
+                <ClockIcon className="w-5 h-5 animate-spin-slow" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 text-sm">Room {selectedRoom.room_number} Held For You</span>
+                  <span className="font-mono font-bold text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-lg border border-amber-300 text-xs">
+                    {Math.floor(secondsRemaining / 60).toString().padStart(2, "0")}:
+                    {(secondsRemaining % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Your room is locked for 10 minutes so nobody else can take it. Finish your booking before the timer expires.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetForm}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-rose-600 hover:bg-rose-50 border border-slate-300 bg-white transition shrink-0"
+              title="Release hold and reset form"
+            >
+              <ArrowPathIcon className="w-3.5 h-3.5" />
+              Reset Form
+            </button>
+          </div>
+        )}
 
         {/* Step 1: Search Availability */}
         {step === 1 && (
@@ -566,18 +784,22 @@ export default function PublicBookingPage() {
                   Back
                 </button>
                 <button
-                  onClick={() => {
-                    if (!selectedRoom) {
-                      toast.error("Please select a room");
-                      return;
-                    }
-                    setStep(3);
-                  }}
-                  disabled={!selectedRoom}
+                  type="button"
+                  onClick={proceedToGuestDetails}
+                  disabled={!selectedRoom || isLoading}
                   className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Continue to Guest Details
-                  <ArrowRightIcon className="h-5 w-5" />
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Locking Room...
+                    </>
+                  ) : (
+                    <>
+                      Continue to Guest Details
+                      <ArrowRightIcon className="h-5 w-5" />
+                    </>
+                  )}
                 </button>
               </div>
             )}
@@ -833,44 +1055,92 @@ export default function PublicBookingPage() {
                 </div>
 
                 {/* Bank Details Section */}
-                {bankDetails && (
-                  <div className="mt-4 pt-4 border-t-2 border-blue-200">
-                    <h4 className="font-semibold text-sm text-gray-700 mb-3 flex items-center gap-2">
+                <div className="mt-4 pt-4 border-t-2 border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                       <BanknotesIcon className="h-5 w-5 text-blue-600" />
-                      Bank Transfer Details
+                      Hotel Bank Accounts
                     </h4>
-                    <div className="bg-blue-50 rounded-lg p-3 space-y-1.5 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Bank:</span>
-                        <span className="font-medium">{bankDetails.bank_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Account Name:</span>
-                        <span className="font-medium">{bankDetails.account_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Account Number:</span>
-                        <span className="font-medium font-mono">{bankDetails.account_number}</span>
-                      </div>
-                      {bankDetails.swift_code && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">SWIFT Code:</span>
-                          <span className="font-medium font-mono">{bankDetails.swift_code}</span>
-                        </div>
-                      )}
-                      {bankDetails.instructions && (
-                        <div className="mt-2 pt-2 border-t border-blue-200">
-                          <p className="text-xs text-gray-600">{bankDetails.instructions}</p>
-                        </div>
-                      )}
-                      <div className="mt-2 pt-2 border-t border-blue-200">
-                        <p className="text-xs text-amber-600 font-medium">
-                          ⚠️ Please use your booking reference as payment reference
-                        </p>
-                      </div>
-                    </div>
+                    <span className="text-[11px] text-slate-500 font-medium">Choose an account</span>
                   </div>
-                )}
+
+                  {allBankAccounts.length === 0 && bankDetails ? (
+                    <div className="bg-blue-50 rounded-xl p-3.5 space-y-1.5 text-xs text-slate-900 border border-blue-100">
+                      <p className="font-bold">{bankDetails.bank_name}</p>
+                      <p className="font-mono text-sm font-semibold">{bankDetails.account_number}</p>
+                      <p className="text-slate-600">{bankDetails.account_name}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                      {allBankAccounts.map((acc) => {
+                        const isCopied = copiedBankId === acc.id;
+                        return (
+                          <div
+                            key={acc.id}
+                            className="bg-slate-50 hover:bg-blue-50/50 rounded-xl p-3 border border-slate-200 space-y-2 transition-all text-xs"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="font-bold text-slate-900 block text-xs">{acc.bank_name}</span>
+                                <span className="text-[11px] text-slate-600">{acc.account_name}</span>
+                                {acc.branch_name && (
+                                  <span className="text-[10px] text-slate-500 block">({acc.branch_name})</span>
+                                )}
+                              </div>
+                              {(acc.qr_code_url || acc.qr_code) && (
+                                <img
+                                  src={getImageUrl(acc.qr_code_url || acc.qr_code || "")}
+                                  alt="QR Code"
+                                  className="w-11 h-11 object-contain rounded border border-slate-200 bg-white shrink-0"
+                                />
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                              <span className="font-mono font-bold text-xs text-slate-900">
+                                {acc.account_number}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(acc.account_number);
+                                  setCopiedBankId(acc.id);
+                                  toast.success(`${acc.bank_name} account number copied!`);
+                                  setTimeout(() => setCopiedBankId(null), 2500);
+                                }}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition ${
+                                  isCopied
+                                    ? "bg-emerald-600 text-white"
+                                    : "bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200"
+                                }`}
+                              >
+                                {isCopied ? (
+                                  <>
+                                    <ClipboardDocumentCheckIcon className="w-3.5 h-3.5" />
+                                    Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+                                    Copy
+                                  </>
+                                )}
+                              </button>
+                            </div>
+
+                            {acc.swift_code && (
+                              <p className="text-[10px] text-slate-500">SWIFT: {acc.swift_code}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-slate-600 italic bg-amber-50/70 border border-amber-200/70 p-2.5 rounded-xl">
+                    💡 Transfer the total stay amount via bank app or branch, then attach your receipt screenshot on the left.
+                  </p>
+                </div>
 
                 <button
                   onClick={() => setStep(2)}

@@ -19,7 +19,7 @@ export function DashboardShell({ items, title, badge, children }: DashboardShell
   const { isOpen } = useSidebarStore();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
       <Sidebar items={items} title={title} badge={badge} />
       <div
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${

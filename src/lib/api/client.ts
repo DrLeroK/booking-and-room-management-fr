@@ -63,7 +63,15 @@ apiClient.interceptors.response.use(
         deleteCookie("refresh_token");
         deleteCookie("user_role");
         if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          const currentPath = window.location.pathname;
+          const isDashboardRoute =
+            currentPath.startsWith("/reception") ||
+            currentPath.startsWith("/manager") ||
+            currentPath.startsWith("/owner") ||
+            currentPath.startsWith("/housekeeping");
+          if (isDashboardRoute) {
+            window.location.href = "/login";
+          }
         }
         return Promise.reject(refreshError);
       }

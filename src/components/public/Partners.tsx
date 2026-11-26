@@ -3,22 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { contentAPI } from "@/lib/api/endpoints";
+import { getImageUrl } from "@/lib/utils";
 
 interface PartnerItem {
   id: number;
   name: string;
   logo?: string;
+  logo_url?: string;
   description?: string;
   website_url?: string;
 }
-
-const getImageUrl = (path?: string) => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  const baseUrl = apiUrl.replace("/api/v1", "");
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
 
 export function Partners() {
   const ref = useRef(null);
@@ -69,7 +63,7 @@ export function Partners() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {partners.map((partner, index) => {
-              const logoSrc = getImageUrl(partner.logo);
+              const logoSrc = getImageUrl(partner.logo_url || partner.logo);
               const cardContent = (
                 <motion.div
                   key={partner.id}
