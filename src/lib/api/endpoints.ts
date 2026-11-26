@@ -409,3 +409,63 @@ export const bankAPI = {
   deleteBankAccount: (id: number) =>
     api.delete(`/content/bank-accounts/${id}/`),
 };
+
+// ============ IN-APP NOTIFICATIONS ENDPOINTS ============
+export interface AppNotification {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: string;
+  notification_type_display: string;
+  target_role: string;
+  link: string;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
+export const notificationsAPI = {
+  getNotifications: (params?: { page?: number; is_read?: boolean }) =>
+    api.get<{ count: number; unread_count: number; results: AppNotification[] }>('/notifications/', { params }),
+
+  markAsRead: (id: number) =>
+    api.post<{ notification: AppNotification; unread_count: number }>(`/notifications/${id}/mark-read/`),
+
+  markAllAsRead: () =>
+    api.post<{ detail: string; unread_count: number }>('/notifications/mark-all-read/'),
+};
+
+// ============ AUDIT LOG ENDPOINTS ============
+export interface AuditLogItem {
+  id: number;
+  actor: number | null;
+  actor_name: string;
+  actor_email: string;
+  actor_role: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  description: string;
+  changes: Record<string, any>;
+  ip_address: string | null;
+  user_agent: string;
+  created_at: string;
+}
+
+export const auditAPI = {
+  getAuditLogs: (params?: {
+    page?: number;
+    action?: string;
+    entity_type?: string;
+    search?: string;
+    start_date?: string;
+    end_date?: string;
+  }) =>
+    api.get<{
+      count: number;
+      total_pages: number;
+      current_page: number;
+      results: AuditLogItem[];
+    }>('/audit-logs/', { params }),
+};
+

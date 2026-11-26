@@ -41,6 +41,7 @@ export const ownerNavItems: NavItem[] = [
   { title: 'Analytics', href: '/owner/analytics', iconName: 'LineChart' },
   { title: 'Rooms', href: '/owner', iconName: 'Building' },
   { title: 'Users & Staff', href: '/owner/users', iconName: 'Users' },
+  { title: 'Audit Logs', href: '/owner/audit-logs', iconName: 'FileText' },
   { title: 'Settings', href: '/owner/settings', iconName: 'Settings' },
 ];
 
