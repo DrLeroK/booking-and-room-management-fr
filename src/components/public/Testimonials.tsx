@@ -120,7 +120,7 @@ export function Testimonials() {
                     </div>
                     <div className="mb-3 text-lg">{renderStars(item.rating)}</div>
                     <p className="text-gray-600 text-sm leading-relaxed italic">
-                      "{item.comment}"
+                      &ldquo;{item.comment}&rdquo;
                     </p>
                   </div>
                 </motion.div>

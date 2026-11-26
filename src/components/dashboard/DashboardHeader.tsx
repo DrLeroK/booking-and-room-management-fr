@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Bars3Icon, BellIcon, UserCircleIcon, BanknotesIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useUIStore } from "@/lib/store/uiStore";
 import { bankAPI } from "@/lib/api/endpoints";
@@ -27,13 +27,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const [loading, setLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (showBankModal) {
-      fetchBankDetails();
-    }
-  }, [showBankModal]);
-
-  const fetchBankDetails = async () => {
+  const fetchBankDetails = useCallback(async () => {
     setLoading(true);
     try {
       const response = await bankAPI.getPublicBankDetails();
@@ -44,7 +38,13 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (showBankModal) {
+      fetchBankDetails();
+    }
+  }, [showBankModal, fetchBankDetails]);
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text);

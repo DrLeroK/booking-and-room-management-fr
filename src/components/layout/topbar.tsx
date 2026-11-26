@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Menu,
@@ -71,7 +71,7 @@ export function Topbar({ title, badge }: TopbarProps) {
   const notifRef = useRef<HTMLDivElement>(null);
 
   // Fetch pending verifications
-  const fetchPendingVerifications = async () => {
+  const fetchPendingVerifications = useCallback(async () => {
     try {
       const res = await bookingAPI.getPendingVerification();
       const count = res.data?.count ?? (res.data?.results ? res.data.results.length : 0);
@@ -80,13 +80,15 @@ export function Topbar({ title, badge }: TopbarProps) {
     } catch {
       // Fallback silently if unauthenticated or error
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPendingVerifications();
     const interval = setInterval(fetchPendingVerifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [fetchPendingVerifications]);
 
   // Close notification dropdown when clicking outside
   useEffect(() => {
