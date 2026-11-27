@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { format, differenceInDays } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface Booking {
   id: number;
@@ -261,7 +262,7 @@ export default function CheckOutPage() {
                       )}
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-bold text-blue-600">${booking.total_amount}</p>
+                      <p className="font-bold text-blue-600">{formatCurrency(booking.total_amount)}</p>
                       <p className="text-xs text-gray-500">Total</p>
                       <button
                         onClick={(e) => {
@@ -327,7 +328,7 @@ export default function CheckOutPage() {
                 </div>
                 <div>
                   <p className="text-gray-500">Total Amount</p>
-                  <p className="font-bold text-blue-600">${selectedBooking.total_amount}</p>
+                  <p className="font-bold text-blue-600">{formatCurrency(selectedBooking.total_amount)}</p>
                 </div>
               </div>
 

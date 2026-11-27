@@ -10,7 +10,7 @@ import { Footer } from "@/components/common/Footer";
 import { bookingAPI, roomAPI, bankAPI } from "@/lib/api/endpoints";
 import toast from "react-hot-toast";
 import { format, addDays, differenceInDays } from "date-fns";
-import { normalizeEthiopianPhone, getImageUrl } from "@/lib/utils";
+import { normalizeEthiopianPhone, getImageUrl, formatCurrency } from "@/lib/utils";
 import {
   CalendarIcon,
   UsersIcon,
@@ -723,8 +723,8 @@ export default function PublicBookingPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xl font-bold text-blue-600">
-                          ${room.effective_price_per_night}
-                          <span className="text-sm font-normal text-gray-500">/night</span>
+                          {formatCurrency(room.effective_price_per_night, "ETB")}
+                          <span className="text-sm font-normal text-gray-500"> / night</span>
                         </p>
                       </div>
                     </div>
@@ -752,7 +752,7 @@ export default function PublicBookingPage() {
                           <span className="text-gray-600">
                             Total for {roomNights > 0 ? roomNights : 1} night(s):
                           </span>
-                          <span className="font-bold text-blue-600">${total.toFixed(2)}</span>
+                          <span className="font-bold text-blue-600">{formatCurrency(total, "ETB")}</span>
                         </div>
                       </div>
                     )}
@@ -1027,11 +1027,11 @@ export default function PublicBookingPage() {
                   <div className="border-t border-gray-200 pt-3 mt-3">
                     <div className="flex justify-between text-base">
                       <span className="font-semibold">Rate per night</span>
-                      <span className="font-semibold">${selectedRoom.effective_price_per_night}</span>
+                      <span className="font-semibold">{formatCurrency(selectedRoom.effective_price_per_night, "ETB")}</span>
                     </div>
                     <div className="flex justify-between text-lg font-bold text-blue-600 mt-1">
                       <span>Total</span>
-                      <span>${calculatedTotal.toFixed(2)}</span>
+                      <span>{formatCurrency(calculatedTotal, "ETB")}</span>
                     </div>
                   </div>
 

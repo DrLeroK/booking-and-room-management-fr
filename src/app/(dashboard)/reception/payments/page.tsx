@@ -23,6 +23,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { format, differenceInDays } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface Payment {
   id: number;
@@ -304,7 +305,7 @@ export default function PaymentsPage() {
                       <span className="font-mono text-xs">{payment.booking_details?.booking_reference || "N/A"}</span>
                       <p className="text-xs text-gray-500">Room {payment.booking_details?.room_details?.room_number}</p>
                     </td>
-                    <td className="py-3 text-right font-bold text-blue-600">${payment.amount}</td>
+                    <td className="py-3 text-right font-bold text-blue-600">{formatCurrency(payment.amount)}</td>
                     <td className="py-3 text-xs">{getPaymentTypeDisplay(payment.payment_type)}</td>
                     <td className="py-3 text-center">
                       <span className={`badge ${statusConfig.color} flex items-center gap-1 justify-center`}>
@@ -394,7 +395,7 @@ export default function PaymentsPage() {
                       Payment Info
                     </h4>
                     <div className="space-y-1 text-sm">
-                      <p><span className="text-gray-500">Amount:</span> <span className="font-bold text-blue-600">${selectedPayment.amount}</span></p>
+                      <p><span className="text-gray-500">Amount:</span> <span className="font-bold text-blue-600">{formatCurrency(selectedPayment.amount)}</span></p>
                       <p><span className="text-gray-500">Type:</span> {getPaymentTypeDisplay(selectedPayment.payment_type)}</p>
                       <p><span className="text-gray-500">Method:</span> {selectedPayment.payment_method.replace("_", " ")}</p>
                       {selectedPayment.notes && (
@@ -559,7 +560,7 @@ export default function PaymentsPage() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Total Amount</p>
-                    <p className="font-bold text-lg text-blue-600">${selectedPayment.amount}</p>
+                    <p className="font-bold text-lg text-blue-600">{formatCurrency(selectedPayment.amount)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-500">Guest Name</p>

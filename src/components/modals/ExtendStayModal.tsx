@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { XMarkIcon, CalendarDaysIcon, CurrencyDollarIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, CalendarDaysIcon, BanknotesIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { bookingAPI } from "@/lib/api/endpoints";
+import { formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { addDays, format, parseISO, differenceInCalendarDays } from "date-fns";
 
@@ -131,7 +132,7 @@ export function ExtendStayModal({ isOpen, onClose, booking, onSuccess }: ExtendS
             </div>
             <div>
               <span className="text-gray-500 block">Nightly Rate:</span>
-              <span className="font-semibold text-blue-600">${nightlyRate.toFixed(2)} / night</span>
+              <span className="font-semibold text-blue-600">{formatCurrency(nightlyRate)} / night</span>
             </div>
           </div>
 
@@ -164,7 +165,7 @@ export function ExtendStayModal({ isOpen, onClose, booking, onSuccess }: ExtendS
               </div>
               <div className="text-right">
                 <span className="text-xs text-blue-700 block">Additional Cost</span>
-                <span className="text-xl font-black text-blue-700">${additionalCost.toFixed(2)}</span>
+                <span className="text-xl font-black text-blue-700">{formatCurrency(additionalCost)}</span>
               </div>
             </div>
           )}
@@ -189,7 +190,7 @@ export function ExtendStayModal({ isOpen, onClose, booking, onSuccess }: ExtendS
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Money Received Now ($)
+                Money Received Now (ETB)
               </label>
               <div className="relative">
                 <input
@@ -201,7 +202,7 @@ export function ExtendStayModal({ isOpen, onClose, booking, onSuccess }: ExtendS
                   placeholder="0.00"
                   className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium text-gray-900"
                 />
-                <CurrencyDollarIcon className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
+                <BanknotesIcon className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
               </div>
             </div>
           </div>

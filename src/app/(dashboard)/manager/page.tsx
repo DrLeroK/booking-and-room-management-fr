@@ -22,6 +22,7 @@ import {
   DocumentArrowDownIcon,
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 interface DashboardData {
   daily: any;
@@ -316,7 +317,7 @@ export default function ManagerDashboard() {
                     <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full border ${getStatusColor(b.status)}`}>
                       {getStatusDisplay(b.status)}
                     </span>
-                    <p className="text-xs font-bold text-gray-900 mt-1">${Number(b.total_amount).toFixed(2)}</p>
+                    <p className="text-xs font-bold text-gray-900 mt-1">{formatCurrency(b.total_amount)}</p>
                   </div>
                 </div>
               ))}
@@ -362,7 +363,7 @@ export default function ManagerDashboard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-gray-900">${booking.total_amount}</p>
+                      <p className="text-sm font-bold text-gray-900">{formatCurrency(booking.total_amount)}</p>
                       <Link
                         href="/reception"
                         className="inline-block mt-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 underline"
@@ -409,7 +410,7 @@ export default function ManagerDashboard() {
                 <div className="flex items-center gap-4">
                   <span className="text-gray-500">{day.rooms_sold || 0} rooms</span>
                   <span className="text-gray-500">{day.occupancy_rate_percentage}%</span>
-                  <span className="font-semibold text-blue-600">${Number(day.total_revenue || 0).toFixed(2)}</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(day.total_revenue || 0)}</span>
                 </div>
               </div>
             ))}
@@ -439,7 +440,7 @@ export default function ManagerDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-gray-600">{type.active_rooms_count || 0} active rooms</span>
-                  <span className="font-bold text-blue-600">${type.base_price_per_night}/night</span>
+                  <span className="font-bold text-blue-600">{formatCurrency(type.base_price_per_night)}/night</span>
                 </div>
               </div>
             ))}

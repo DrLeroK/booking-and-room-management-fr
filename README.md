@@ -71,7 +71,13 @@
 - **Staff Management**: Create staff accounts, filter by role (`RECEPTIONIST`, `MANAGER`, `OWNER`, `ADMIN`), and toggle account active status.
 - **Financial Reports & Exports**: Export CSV reports for bookings, payments, and guest registers.
 
-### 📱 5. Progressive Web App (PWA) & SEO/AEO/GEO
+### ✨ 5. Elegant Luxury Aesthetic & Currency Localization
+- **Warm Gold & Amber Visual Language**: Refined luxury palette (`amber-500`, `yellow-500`, golden gradients, glowing star indicators) across the landing page, gallery, testimonials, and rooms.
+- **Ethiopian Birr (`ETB`) Standard**: Centralized currency formatting (`formatCurrency`) standardizes all room rates, deposits, totals, and receipts to `ETB` (e.g. `1,500.00 ETB`) across all public and staff portals.
+- **Room Type Picture Management**: Managers can directly upload, preview, and update room type showcase images (`FormData` API), immediately syncing with public room displays.
+- **Zero-Failure Recruiter Offline Fallbacks**: In case the free-tier backend is sleeping or spinning up, the public landing page, gallery, and room categories render rich, curated photography and structured data without breaking.
+
+### 📱 6. Progressive Web App (PWA) & SEO/AEO/GEO
 - **PWA Installation**: Installable as a native desktop or mobile app via `manifest.ts` / `manifest.json` and `sw.js` service worker.
 - **Search & AI Optimization**: Dynamic `robots.ts` and `sitemap.ts` configured for Google SEO, Answer Engine Optimization (AEO), and Generative Engine Optimization (GEO).
 

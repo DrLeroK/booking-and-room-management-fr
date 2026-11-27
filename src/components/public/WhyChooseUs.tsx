@@ -40,9 +40,12 @@ export function WhyChooseUs() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 tracking-wide uppercase mb-3">
+            ⭐ The StayCraft Standard
+          </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose StayCraft?</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Discover what makes us the preferred choice for travelers worldwide.
+            Discover what makes us the preferred choice for discerning travelers and dignitaries worldwide.
           </p>
         </motion.div>
 
@@ -53,10 +56,10 @@ export function WhyChooseUs() {
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              className="card p-6 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="card p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-amber-100/70 hover:border-amber-400/50 bg-gradient-to-b from-white to-amber-50/10 group"
             >
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">{feature.icon}</div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-amber-800 transition-colors">{feature.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}

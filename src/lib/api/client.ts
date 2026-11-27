@@ -11,12 +11,18 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor - adds token to every request
+// Request interceptor - adds token to requests, omitting it for public reads to avoid expired token 401s
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
+      const isPublicRead =
+        config.method?.toLowerCase() === "get" &&
+        (config.url?.includes("/content/") ||
+          config.url?.includes("/rooms/types/") ||
+          config.url?.includes("/rooms/amenities/"));
+
       const token = getCookie("access_token");
-      if (token) {
+      if (token && !isPublicRead) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
@@ -41,6 +47,14 @@ apiClient.interceptors.response.use(
       !originalRequest.url?.includes('/login/')
     ) {
       originalRequest._retry = true;
+
+      // If it's a public GET endpoint, retry once cleanly without the stale Authorization header
+      if (originalRequest.method?.toLowerCase() === "get" && originalRequest.url?.includes("/content/")) {
+        if (originalRequest.headers) {
+          delete originalRequest.headers.Authorization;
+        }
+        return apiClient(originalRequest);
+      }
 
       try {
         const refreshToken = getCookie("refresh_token");

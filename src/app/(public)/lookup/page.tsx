@@ -6,7 +6,7 @@ import { Footer } from "@/components/common/Footer";
 import { bookingAPI } from "@/lib/api/endpoints";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
-import { normalizeEthiopianPhone } from "@/lib/utils";
+import { normalizeEthiopianPhone, formatCurrency } from "@/lib/utils";
 import {
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -338,7 +338,7 @@ export default function LookupPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-blue-600">
-                      ${selectedBooking.total_amount}
+                      {formatCurrency(selectedBooking.total_amount)}
                     </p>
                     <p className="text-sm text-gray-500">Total Amount</p>
                   </div>
@@ -369,7 +369,7 @@ export default function LookupPage() {
                       {selectedBooking.room_details?.room_type_details && (
                         <>
                           <p><span className="text-gray-500">Type:</span> {selectedBooking.room_details.room_type_details.name}</p>
-                          <p><span className="text-gray-500">Rate:</span> ${selectedBooking.nightly_rate}/night</p>
+                          <p><span className="text-gray-500">Rate:</span> {formatCurrency(selectedBooking.nightly_rate)}/night</p>
                         </>
                       )}
                       <p><span className="text-gray-500">Guests:</span> {selectedBooking.adults_count} adults{selectedBooking.children_count > 0 ? `, ${selectedBooking.children_count} children` : ""}</p>
@@ -414,7 +414,7 @@ export default function LookupPage() {
                         return (
                           <div key={payment.id} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2">
                             <div>
-                              <p className="font-medium">${payment.amount}</p>
+                              <p className="font-medium">{formatCurrency(payment.amount)}</p>
                               <p className="text-xs text-gray-500">{payment.payment_method}</p>
                             </div>
                             <div className="flex items-center gap-3">

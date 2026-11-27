@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { ExtendStayModal } from "@/components/modals/ExtendStayModal";
+import { formatCurrency } from "@/lib/utils";
 
 interface LiveBoardData {
   date: string;
@@ -263,7 +264,7 @@ export default function ReceptionDashboard() {
                     <td className="py-2.5 font-medium text-gray-900">{booking.guest_details?.full_name}</td>
                     <td className="py-2.5 font-medium">Room {booking.room_details?.room_number}</td>
                     <td className="py-2.5 font-mono text-xs text-blue-700">{booking.booking_reference}</td>
-                    <td className="py-2.5 text-right font-bold text-gray-900">${booking.total_amount}</td>
+                    <td className="py-2.5 text-right font-bold text-gray-900">{formatCurrency(booking.total_amount)}</td>
                     <td className="py-2.5 text-right">
                       <a
                         href="/reception/payments"

@@ -18,6 +18,65 @@ interface BackendGalleryItem {
   caption?: string;
 }
 
+const FALLBACK_GALLERY_ITEMS: BackendGalleryItem[] = [
+  {
+    id: 1,
+    title: "Executive King Bedroom",
+    category_name: "Bedrooms & Suites",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80",
+    caption: "Spacious master bedroom with plush king mattress and ambient lighting",
+  },
+  {
+    id: 2,
+    title: "Presidential Penthouse Suite",
+    category_name: "Bedrooms & Suites",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
+    caption: "Top-floor panoramic city terrace view with private jacuzzi",
+  },
+  {
+    id: 3,
+    title: "Deluxe Double Bedroom",
+    category_name: "Bedrooms & Suites",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
+    caption: "Contemporary elegance featuring premium queen bedding",
+  },
+  {
+    id: 4,
+    title: "Gourmet Restaurant & Bar",
+    category_name: "Dining & Lounge",
+    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
+    caption: "International & traditional Ethiopian gourmet dining",
+  },
+  {
+    id: 5,
+    title: "Rooftop Sunset Lounge",
+    category_name: "Dining & Lounge",
+    image: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=1200&q=80",
+    caption: "Artisanal cocktails and sweeping skyline sunset views",
+  },
+  {
+    id: 6,
+    title: "Luxury Spa & Heated Bath",
+    category_name: "Spa & Fitness",
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1200&q=80",
+    caption: "Holistic relaxation treatments and therapeutic massages",
+  },
+  {
+    id: 7,
+    title: "Skyline Infinity Pool",
+    category_name: "Spa & Fitness",
+    image: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80",
+    caption: "Heated swimming pool with private cabanas and deck loungers",
+  },
+  {
+    id: 8,
+    title: "Grand Hotel Lobby & Concierge",
+    category_name: "Architecture & Grounds",
+    image: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=80",
+    caption: "Welcoming marble atrium, gold chandeliers, and 24/7 concierge",
+  },
+];
+
 export default function GalleryPage() {
   const [items, setItems] = useState<BackendGalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,9 +89,14 @@ export default function GalleryPage() {
       try {
         const response = await contentAPI.getGallery();
         const data = response.data?.results || response.data || [];
-        setItems(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0) {
+          setItems(data);
+        } else {
+          setItems(FALLBACK_GALLERY_ITEMS);
+        }
       } catch (error) {
-        console.error("Failed to load full photo gallery from backend:", error);
+        console.warn("Failed to load full photo gallery from backend, using fallbacks:", error);
+        setItems(FALLBACK_GALLERY_ITEMS);
       } finally {
         setLoading(false);
       }
@@ -88,10 +152,14 @@ export default function GalleryPage() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <span className="text-blue-600 font-semibold text-sm tracking-wide uppercase">Hotel Showcase</span>
-          <h1 className="text-4xl font-bold text-gray-900 mt-1 mb-4">Official Photo Gallery</h1>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 border border-amber-500/30 uppercase tracking-wider">
+            Hotel Visual Showcase
+          </span>
+          <h1 className="text-4xl font-extrabold text-gray-900 mt-2 mb-4 tracking-tight">
+            Official <span className="bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">Photo Gallery</span>
+          </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Explore the beauty and elegance of StayCraft Hotel through real photos uploaded from our content management system.
+            Explore the beauty, architecture, and refined luxury of StayCraft Hotel through high-definition photography.
           </p>
         </motion.div>
 
@@ -107,10 +175,10 @@ export default function GalleryPage() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full transition-all text-sm font-medium ${
+                className={`px-4 py-2 rounded-full transition-all text-sm font-semibold ${
                   selectedCategory === category
-                    ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                    : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    ? "bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-slate-950 shadow-md shadow-amber-500/20"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700"
                 }`}
               >
                 {category}

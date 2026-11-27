@@ -9,19 +9,24 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+export const DEFAULT_CURRENCY = 'ETB';
+
 /**
  * Formats a monetary amount nicely with standard currency formatting.
+ * Defaults to Ethiopian Birr (ETB), formatted cleanly as "1,500.00 ETB".
  */
-export function formatCurrency(amount: number | string | null | undefined, currency = 'USD'): string {
+export function formatCurrency(
+  amount: number | string | null | undefined,
+  currency = DEFAULT_CURRENCY
+): string {
   if (amount === null || amount === undefined || isNaN(Number(amount))) {
-    return '$0.00';
+    return `0.00 ${currency}`;
   }
   const numeric = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
+  return `${numeric.toLocaleString('en-US', {
     minimumFractionDigits: 2,
-  }).format(numeric);
+    maximumFractionDigits: 2,
+  })} ${currency}`;
 }
 
 /**

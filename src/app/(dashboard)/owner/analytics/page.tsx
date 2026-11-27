@@ -15,6 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import { formatCurrency } from "@/lib/utils";
 
 interface AnalyticsData {
   daily: any;
@@ -343,7 +344,7 @@ export default function AnalyticsPage() {
               return (
                 <div key={method} className="text-center p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-500 capitalize">{method.replace("_", " ").toLowerCase()}</p>
-                  <p className="text-lg font-bold text-blue-600">${numAmount.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-blue-600">{formatCurrency(numAmount)}</p>
                   <p className="text-xs text-gray-400">{percentage.toFixed(1)}%</p>
                 </div>
               );

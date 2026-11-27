@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
 import { toast } from "react-hot-toast";
+import { formatCurrency } from "@/lib/utils";
 
 interface ReportData {
   daily: any;
@@ -310,7 +311,7 @@ export default function ReportsPage() {
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
-                <span className="w-24 text-right font-semibold text-gray-700">${value.toFixed(2)}</span>
+                <span className="w-24 text-right font-semibold text-gray-700">{formatCurrency(value)}</span>
               </div>
             );
           })}

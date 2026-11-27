@@ -13,6 +13,7 @@ import {
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { ExtendStayModal } from "@/components/modals/ExtendStayModal";
+import { formatCurrency } from "@/lib/utils";
 
 interface Booking {
   id: number;
@@ -169,7 +170,7 @@ export default function BookingsPage() {
                         <span className="font-semibold text-blue-600">{format(new Date(booking.check_out_date), "MMM d, yyyy")}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-right font-bold text-gray-900">${booking.total_amount}</td>
+                    <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(booking.total_amount)}</td>
                     <td className="p-4 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusConfig.color} inline-flex items-center gap-1`}>
                         <StatusIcon className="h-3.5 w-3.5" />

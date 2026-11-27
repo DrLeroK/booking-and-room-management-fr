@@ -19,7 +19,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { format, addDays, differenceInDays } from "date-fns";
-import { normalizeEthiopianPhone } from "@/lib/utils";
+import { normalizeEthiopianPhone, formatCurrency } from "@/lib/utils";
 
 interface Guest {
   id: number;
@@ -564,7 +564,7 @@ export default function CheckInPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-blue-600">
-                            ${room.effective_price_per_night}
+                            {formatCurrency(room.effective_price_per_night)}
                             <span className="text-sm font-normal text-gray-500">/night</span>
                           </p>
                           {isSelected && (
@@ -612,7 +612,7 @@ export default function CheckInPage() {
                         <div className="mt-3 pt-3 border-t border-blue-200">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-600">Total for {nights > 0 ? nights : 1} night(s):</span>
-                            <span className="font-bold text-blue-600">${total.toFixed(2)}</span>
+                            <span className="font-bold text-blue-600">{formatCurrency(total)}</span>
                           </div>
                         </div>
                       )}
@@ -677,7 +677,7 @@ export default function CheckInPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Total Amount</p>
-              <p className="font-bold text-blue-600 text-lg">${calculatedTotal.toFixed(2)}</p>
+              <p className="font-bold text-blue-600 text-lg">{formatCurrency(calculatedTotal)}</p>
             </div>
           </div>
 

@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
+import { formatCurrency } from "@/lib/utils";
 
 interface DashboardData {
   daily: any;
@@ -221,7 +222,7 @@ export default function OwnerDashboard() {
                     <span className="text-sm capitalize text-gray-600">
                       {method.replace("_", " ").toLowerCase()}
                     </span>
-                    <span className="font-semibold text-blue-600">${numAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-blue-600">{formatCurrency(numAmount)}</span>
                   </div>
                 );
               })

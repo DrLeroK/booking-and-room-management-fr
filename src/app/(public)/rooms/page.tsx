@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { roomAPI } from "@/lib/api/endpoints";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getImageUrl } from "@/lib/utils";
 import {
   SparklesIcon,
   CheckBadgeIcon,
@@ -25,56 +25,89 @@ interface RoomType {
   max_occupancy: number;
   total_rooms?: number;
   image?: string;
+  image_url?: string;
   amenities?: Array<{ id: number; name: string }>;
 }
 
 const FALLBACK_ROOM_TYPES: RoomType[] = [
   {
     id: 1,
-    name: "Deluxe King Suite",
-    code: "DLX-KING",
-    description: "Spacious master suite featuring a plush king-sized bed, panoramic city views, marble en-suite bathroom, and private executive work lounge.",
-    base_price_per_night: 180,
+    name: "Executive King Suite",
+    code: "EXEC_KNG",
+    description: "Spacious master suite featuring a plush king-sized bed, panoramic city views, marble en-suite bathroom with jacuzzi, and private executive work lounge.",
+    base_price_per_night: 4500,
     max_occupancy: 2,
-    image: "/images/hero-hotel.jpg",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80",
     amenities: [
-      { id: 1, name: "King Bed" },
+      { id: 1, name: "Orthopedic King Bed" },
       { id: 2, name: "High-Speed Wi-Fi" },
-      { id: 3, name: "City Skyline View" },
-      { id: 4, name: "Rainfall Shower" },
+      { id: 3, name: "City Skyline Balcony" },
+      { id: 4, name: "Hydro-Massage Tub" },
       { id: 5, name: "24/7 Room Service" },
     ],
   },
   {
     id: 2,
-    name: "Executive Twin Room",
-    code: "EXE-TWIN",
-    description: "Modern elegance tailored for business travelers and duos. Features two premium twin beds, ergonomic workstation, and soundproof acoustic windows.",
-    base_price_per_night: 140,
+    name: "Deluxe Double Bedroom",
+    code: "DLX_DBL",
+    description: "Contemporary elegance tailored for business travelers and couples. Features a premium queen bed, ergonomic workstation, and acoustic soundproof windows.",
+    base_price_per_night: 2800,
     max_occupancy: 2,
-    image: "/images/hero-hotel.jpg",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1200&q=80",
     amenities: [
-      { id: 1, name: "Twin Beds" },
+      { id: 1, name: "Queen Bed" },
       { id: 2, name: "Executive Desk" },
-      { id: 3, name: "Smart TV" },
-      { id: 4, name: "Mini Bar" },
+      { id: 3, name: "Smart TV 55\"" },
+      { id: 4, name: "Stocked Mini Bar" },
       { id: 5, name: "Espresso Maker" },
     ],
   },
   {
     id: 3,
     name: "Presidential Penthouse",
-    code: "PRS-SUITE",
-    description: "The pinnacle of Addis Ababa luxury. Grand parlor with dining room, wrap-around balcony, private jacuzzi, butler service, and VIP airport chauffeur.",
-    base_price_per_night: 350,
+    code: "PRES_PENT",
+    description: "The pinnacle of Addis Ababa luxury. Grand parlor with dining room, wrap-around terrace, private heated jacuzzi, dedicated butler, and VIP airport chauffeur.",
+    base_price_per_night: 15000,
     max_occupancy: 4,
-    image: "/images/hero-hotel.jpg",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     amenities: [
-      { id: 1, name: "Private Jacuzzi" },
-      { id: 2, name: "Balcony Lounge" },
-      { id: 3, name: "VIP Chauffeur" },
-      { id: 4, name: "Dining Room" },
-      { id: 5, name: "Dedicated Concierge" },
+      { id: 1, name: "Private Heated Jacuzzi" },
+      { id: 2, name: "Panoramic Terrace" },
+      { id: 3, name: "VIP Airport Chauffeur" },
+      { id: 4, name: "Dining Salon" },
+      { id: 5, name: "Dedicated Butler" },
+    ],
+  },
+  {
+    id: 4,
+    name: "Family Suite Bedroom",
+    code: "FAM_STE",
+    description: "Two connected bedrooms with two queen beds, extra wardrobe, expansive living lounge, and dining nook for groups or families.",
+    base_price_per_night: 6800,
+    max_occupancy: 4,
+    image: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80",
+    amenities: [
+      { id: 1, name: "Two Queen Beds" },
+      { id: 2, name: "Living Room Lounge" },
+      { id: 3, name: "Kitchenette & Mini Bar" },
+      { id: 4, name: "Two Smart TVs" },
+      { id: 5, name: "Complimentary Breakfast" },
+    ],
+  },
+  {
+    id: 5,
+    name: "Standard Single Bedroom",
+    code: "STD_SGL",
+    description: "Cozy, quiet room designed for solo travelers with ergonomic executive desk, smart TV, rainfall shower, and premium bedding.",
+    base_price_per_night: 1500,
+    max_occupancy: 1,
+    image: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1200&q=80",
+    amenities: [
+      { id: 1, name: "Single Orthopedic Bed" },
+      { id: 2, name: "High-Speed Wi-Fi" },
+      { id: 3, name: "Workstation Desk" },
+      { id: 4, name: "Rainfall Shower" },
+      { id: 5, name: "Daily Breakfast" },
     ],
   },
 ];
@@ -156,27 +189,30 @@ export default function RoomsPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {roomTypes.map((room) => {
-                const price = Number(room.base_price_per_night) || 120;
+              {roomTypes.map((room, index) => {
+                const price = Number(room.base_price_per_night) || 2800;
+                const fallbackImg = FALLBACK_ROOM_TYPES[index % FALLBACK_ROOM_TYPES.length].image!;
+                const imgSrc = getImageUrl(room.image_url || room.image) || fallbackImg;
+
                 return (
                   <div
                     key={room.id}
                     className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group"
                   >
                     {/* Room Card Image */}
-                    <div className="relative h-56 bg-slate-100 overflow-hidden">
+                    <div className="relative h-60 bg-slate-900 overflow-hidden">
                       <img
-                        src={room.image || "/images/hero-hotel.jpg"}
+                        src={imgSrc}
                         alt={room.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/images/hero-hotel.jpg";
+                          (e.target as HTMLImageElement).src = fallbackImg;
                         }}
                       />
-                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-slate-900 shadow">
+                      <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-slate-900 shadow">
                         Max {room.max_occupancy} {room.max_occupancy === 1 ? "Guest" : "Guests"}
                       </div>
-                      <div className="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-medium text-white">
+                      <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-mono font-bold text-amber-300">
                         {room.code}
                       </div>
                     </div>
@@ -213,15 +249,15 @@ export default function RoomsPage() {
                         <div>
                           <span className="text-xs text-slate-500 uppercase tracking-wider block">From</span>
                           <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold text-slate-900">
-                              {formatCurrency(price, "USD")}
+                            <span className="text-xl font-extrabold text-amber-600">
+                              {formatCurrency(price, "ETB")}
                             </span>
                             <span className="text-xs text-slate-500">/ night</span>
                           </div>
                         </div>
                         <Link
                           href={`/booking?room=${room.id}`}
-                          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow hover:shadow-md transition-all inline-flex items-center gap-1.5"
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold text-sm shadow-md hover:shadow-amber-500/25 transition-all inline-flex items-center gap-1.5"
                         >
                           Book Now
                           <ArrowRightIcon className="w-4 h-4" />

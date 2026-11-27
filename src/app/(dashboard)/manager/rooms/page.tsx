@@ -15,6 +15,7 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import { formatCurrency } from "@/lib/utils";
 
 interface RoomType {
   id: number;
@@ -295,7 +296,7 @@ export default function RoomsManagementPage() {
                     {room.room_type_details?.name || "Unknown Type"}
                   </p>
                   <p className="text-lg font-bold text-blue-600 mt-2">
-                    ${room.effective_price_per_night}
+                    {formatCurrency(room.effective_price_per_night)}
                     <span className="text-sm font-normal text-gray-500">/night</span>
                   </p>
                   {room.amenities_details && room.amenities_details.length > 0 && (
@@ -418,7 +419,7 @@ export default function RoomsManagementPage() {
                   <option value="">Select Room Type</option>
                   {roomTypes.map((type) => (
                     <option key={type.id} value={type.id}>
-                      {type.name} (${type.base_price_per_night}/night)
+                      {type.name} ({formatCurrency(type.base_price_per_night)}/night)
                     </option>
                   ))}
                 </select>
