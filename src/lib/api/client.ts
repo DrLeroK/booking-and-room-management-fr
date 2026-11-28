@@ -15,8 +15,10 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
+      const isProtectedContent = config.url?.includes("/content/contact-inquiry/");
       const isPublicRead =
         config.method?.toLowerCase() === "get" &&
+        !isProtectedContent &&
         (config.url?.includes("/content/") ||
           config.url?.includes("/rooms/types/") ||
           config.url?.includes("/rooms/amenities/"));

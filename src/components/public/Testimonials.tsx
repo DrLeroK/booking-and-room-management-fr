@@ -113,7 +113,6 @@ export function Testimonials() {
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((item, index) => {
-              const avatarSrc = getImageUrl(item.avatar);
               return (
                 <motion.div
                   key={item.id}
@@ -123,24 +122,11 @@ export function Testimonials() {
                   className="card p-6 hover:shadow-2xl hover:border-amber-400/50 transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between border border-amber-100 bg-gradient-to-b from-white via-white to-amber-50/20"
                 >
                   <div>
-                    <div className="flex items-center gap-4 mb-4">
-                      {avatarSrc ? (
-                        <img
-                          src={avatarSrc}
-                          alt={item.guest_name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-amber-400 shadow-md"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                          {item.guest_name ? item.guest_name.charAt(0).toUpperCase() : "G"}
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{item.guest_name}</h4>
-                        <p className="text-xs text-amber-700 font-medium">
-                          {item.guest_title || item.location || "Verified Guest"}
-                        </p>
-                      </div>
+                    <div className="mb-4">
+                      <h4 className="font-semibold text-gray-900 text-base">{item.guest_name}</h4>
+                      <p className="text-xs text-amber-700 font-medium mt-0.5">
+                        {item.guest_title || item.location || "Verified Guest"}
+                      </p>
                     </div>
                     <div className="mb-3 flex items-center gap-1 text-amber-400">
                       {[...Array(5)].map((_, i) => (

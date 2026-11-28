@@ -36,18 +36,22 @@ export function UserMenu() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200/90 text-slate-900 transition-all shadow-sm"
+        title="Account Menu"
       >
-        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-semibold text-sm shadow-sm">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
           {user.first_name?.[0] || user.username?.[0]?.toUpperCase() || 'U'}
         </div>
-        <div className="hidden md:block text-left text-xs">
-          <p className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">
+        <div className="text-left text-xs">
+          <p className="font-bold text-slate-900 leading-tight truncate max-w-[120px] sm:max-w-[160px]">
             {user.full_name || user.username}
           </p>
-          <p className="text-slate-500 dark:text-slate-400 text-[11px]">{roleName}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-blue-700 font-semibold text-[10px] uppercase tracking-wider">{roleName}</span>
+          </div>
         </div>
-        <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
+        <ChevronDown className="w-4 h-4 text-slate-500 shrink-0 ml-1" />
       </button>
 
       {isOpen && (

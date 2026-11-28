@@ -127,25 +127,31 @@ export default function AboutPage() {
                 viewport={{ once: true }}
                 className="relative"
               >
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                  <div className="aspect-video bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center p-8">
-                    <div className="text-center text-white">
-                      <BuildingOfficeIcon className="h-20 w-20 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">StayCraft Hotel</p>
-                      <p className="text-sm opacity-75">Est. 2020</p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="flex items-center gap-4 text-white">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-amber-200/60 group">
+                  <img
+                    src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80"
+                    alt="StayCraft Luxury Hotel Exterior"
+                    className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
+                  <div className="absolute bottom-5 left-5 right-5">
+                    <div className="flex items-center justify-between text-white">
                       <div>
-                        <p className="text-xs opacity-75">Location</p>
-                        <p className="text-sm font-medium">Bole Road, Addis Ababa</p>
+                        <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block mb-1">
+                          Premier Luxury Landmark
+                        </span>
+                        <p className="text-xl font-bold">StayCraft Hotel &amp; Suites</p>
+                        <p className="text-xs text-slate-300 mt-0.5">Bole Road, Addis Ababa, Ethiopia</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="px-3 py-1 bg-amber-500/90 text-slate-950 rounded-full text-xs font-bold shadow-md">
+                          Est. 2020
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full opacity-20 blur-2xl" />
+                <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-amber-400 rounded-full opacity-25 blur-3xl -z-10" />
               </motion.div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { safeStorage, isValidJwt, isJwtExpired } from '@/lib/security';
 import { siteConfig } from '@/config/site';
+import { getCookie } from 'cookies-next';
 
 export function getApiBaseUrl(): string {
   const envUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || process.env.BACK_API_URL;
@@ -33,12 +34,24 @@ export class ApiClient {
   // ==========================================
 
   public static getAccessToken(): string | null {
-    const token = safeStorage.getItem('access_token');
+    let token = safeStorage.getItem('access_token');
+    if (!token && typeof window !== 'undefined') {
+      const cookieToken = getCookie('access_token');
+      if (typeof cookieToken === 'string') {
+        token = cookieToken;
+      }
+    }
     return isValidJwt(token) ? token : null;
   }
 
   public static getRefreshToken(): string | null {
-    const token = safeStorage.getItem('refresh_token');
+    let token = safeStorage.getItem('refresh_token');
+    if (!token && typeof window !== 'undefined') {
+      const cookieToken = getCookie('refresh_token');
+      if (typeof cookieToken === 'string') {
+        token = cookieToken;
+      }
+    }
     return isValidJwt(token) ? token : null;
   }
 

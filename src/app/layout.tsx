@@ -98,8 +98,8 @@ const jsonLdStructuredData = {
       url: siteUrl,
       telephone: '+251 911 000 000',
       priceRange: '$$$',
-      currenciesAccepted: 'USD, ETB, EUR',
-      paymentAccepted: 'Credit Card, Debit Card, Bank Wire Transfer',
+      currenciesAccepted: 'ETB, USD, EUR',
+      paymentAccepted: 'Credit Card, Debit Card, Bank Wire Transfer, Mobile Money',
       checkinTime: '14:00',
       checkoutTime: '11:00',
       starRating: {
@@ -146,7 +146,7 @@ const jsonLdStructuredData = {
           name: 'How can I check the status of my hotel reservation?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Guests can check their booking status anytime by visiting the booking confirmation page or providing their booking reference code to our 24/7 front desk team.',
+            text: 'Guests can check their booking status anytime by visiting our Booking Lookup page (/lookup) or providing their booking reference code to our 24/7 front desk team.',
           },
         },
       ],

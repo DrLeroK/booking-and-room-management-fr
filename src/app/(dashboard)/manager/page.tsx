@@ -108,8 +108,8 @@ export default function ManagerDashboard() {
   const kpiStats = [
     {
       label: "Today's Revenue",
-      value: `$${Number(data.daily?.total_revenue || 0).toFixed(2)}`,
-      subtext: `ADR: $${Number(data.daily?.adr || 0).toFixed(2)}`,
+      value: formatCurrency(data.daily?.total_revenue || 0),
+      subtext: `ADR: ${formatCurrency(data.daily?.adr || 0)}`,
       icon: CurrencyDollarIcon,
       color: "emerald",
       trend: "up",

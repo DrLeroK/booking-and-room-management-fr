@@ -204,7 +204,7 @@ export default function ReportsPage() {
   const stats = [
     {
       label: "Total Revenue",
-      value: `$${data.weekly?.total_weekly_revenue?.toFixed(2) || "0.00"}`,
+      value: formatCurrency(data.weekly?.total_weekly_revenue || 0),
       icon: CurrencyDollarIcon,
       color: "green",
       change: "+12.5%",
@@ -228,7 +228,7 @@ export default function ReportsPage() {
     },
     {
       label: "ADR (Avg Daily Rate)",
-      value: `$${data.daily?.average_daily_rate_adr?.toFixed(2) || "0.00"}`,
+      value: formatCurrency(data.daily?.average_daily_rate_adr || 0),
       icon: CurrencyDollarIcon,
       color: "orange",
       change: "+2.1%",

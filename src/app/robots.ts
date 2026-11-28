@@ -7,7 +7,21 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/rooms', '/rooms/*', '/booking', '/booking/*', '/contact', '/about'],
+        allow: [
+          '/',
+          '/rooms',
+          '/rooms/*',
+          '/booking',
+          '/booking/*',
+          '/gallery',
+          '/gallery/*',
+          '/services',
+          '/about',
+          '/contact',
+          '/lookup',
+          '/privacy',
+          '/terms',
+        ],
         disallow: [
           '/manager',
           '/manager/*',
@@ -23,7 +37,19 @@ export default function robots(): MetadataRoute.Robots {
       // Explicit permissions for AI & Generative Search Engines (AEO / GEO)
       {
         userAgent: ['GPTBot', 'ChatGPT-User', 'ClaudeBot', 'PerplexityBot', 'Google-Extended', 'Applebot-Extended'],
-        allow: ['/', '/rooms', '/rooms/*', '/booking', '/contact', '/about'],
+        allow: [
+          '/',
+          '/rooms',
+          '/rooms/*',
+          '/booking',
+          '/gallery',
+          '/services',
+          '/about',
+          '/contact',
+          '/lookup',
+          '/privacy',
+          '/terms',
+        ],
         disallow: ['/manager/*', '/reception/*', '/owner/*', '/api/*'],
       },
     ],

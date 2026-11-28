@@ -340,11 +340,6 @@ export function Topbar({ title, badge }: TopbarProps) {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-xs text-slate-700 font-medium">
-            <Hotel className="w-3.5 h-3.5 text-blue-600" />
-            <span>{siteConfig.shortName} Live</span>
-          </div>
-
           <UserMenu />
         </div>
       </header>
